@@ -13,12 +13,6 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %	the following may be specified as parameter/value pairs
 %
 %
-%		minfs
-%		minimum fs used for song detection (default: 2e3)
-%
-%		maxfs
-%		maximum fs used for song detection (default: 6e3)
-%
 %		ratio_thresh
 %		ratio between song frequencies and non-song frequencies for song detection (default: 4)
 %
@@ -43,12 +37,6 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %		colors
 %		spectrogram colormap (default: hot)		
 %
-%		disp_minfs
-%		minimum fs for spectrograms (default: 1e3)		
-%
-%		disp_maxfs
-%		maximum fs for spectrograms (default: 7e3)		
-%
 %		filtering
 %		high pass corner for mic trace (default: 300 Hz)
 %
@@ -70,11 +58,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %		delimiter
 %		delimiter for filename parsing (default: '\_', or underscore)
 %
-%		nosort
-%		set to 1 to not parse filename (data put into separate folder) (default: 0)
 %
-%		subdir
-%		subdir if nosort==1 (default: 'pretty bird')
 %
 % see also ephys_pipeline_intmic_daemon.m, song_det.m, im_reformat.m, ephys_pipeline_mkdirs.m
 %
@@ -84,32 +68,28 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 
 % while running the daemon this can be changed 
 
-minfs=2e3; % the song 'band'
-maxfs=6e3; % the song 'band'
 ratio_thresh=2; % power ratio between song and non-song band
 window=250; % window to calculate ratio in (samples)
 noverlap=0; % just do no overlap, faster
 song_thresh=.2; % between .2 and .3 seems to work best (higher is more exlusive)
+song_band=[2e3 6e3];
 pow_thresh=.05; % raw power threshold (so extremely weak signals are excluded)
 songduration=.8; % moving average of ratio
 low=5;
 high=10;
 colors='hot';
-disp_minfs=1;
-disp_maxfs=10e3;
+disp_band=[1 10e3];
 filtering=300; % changed to 100 from 700 as a more sensible default, leave empty to filter later
 audio_pad=7; % pad on either side of the extraction (in seconds)
-error_buffer=5; % if we can't load a file, how many days old before deleting
 
 % parameters for folder creation
 
 folder_format='yyyy-mm-dd';
-parse_method='auto'; % auto parse parameters from filename? otherwise MUST provide parameters
-		     % through cmdline options
 parse_string='auto'; % how to parse filenames, b=birdid, i=recid, m=micid, t=ttlid, d=date
 		       % character position indicates which token (after delim split) contains the info
 
 date_string='yymmddHHMMSS'; % parse date using datestr format
+auto_delete_int=inf; % delete data n days old (set to inf to never delete)
 
 % directory names
 
@@ -120,12 +100,14 @@ sleep_pre='sleep';
 
 delimiter='\_'; % delimiter for splitting fields in filename
 bird_delimiter='\&'; % delimiter for splitting multiple birds
-subdir='pretty_bird';
+
+% sleep parameters
+
 sleep_window=[ 22 7 ]; % times for keeping track of sleep data (24 hr time, start and stop)
-auto_delete_int=inf; % delete data n days old (set to inf to never delete)
 sleep_fileinterval=10; % specify file interval (in minutes) 
 sleep_segment=5; % how much data to keep (in seconds)
-ttl_skip=0; % skip song detection if TTL detected?
+
+% email_parameters
 
 email_monitor=0; % monitor file creation, email if no files created in email_monitor minutes
 email_flag=0;
@@ -133,6 +115,10 @@ email_noisecut=0;
 email_noiselen=4;
 file_elapsed=0;
 
+% ttl & playback parameters
+
+ttl_extract=1; % set to 1 if you'd like to extract based on TTL
+ttl_skip=0; % skip song detection if TTL detected?
 
 playback_extract=0; % set to 1 if you'd like to extract based on playback
 playback_thresh=.01;
@@ -158,6 +144,10 @@ root_dir=fullfile(pwd,'..','..','intan_data'); % where will the detected files g
 proc_dir=fullfile(pwd,'..','processed'); % where do we put the files after processing, maybe auto-delete
 					 % after we're confident in the operation of the pipeline
 unorganized_dir=fullfile(pwd,'..','unorganized');
+
+% internal parameters
+
+data_types={'ttl','playback','audio'};
 
 hline=repmat('#',[1 80]);
 
@@ -204,20 +194,20 @@ for i=1:2:nparams
 			filtering=varargin{i+1};
 		case 'audio_pad'
 			audio_pad=varargin{i+1};
+		case 'disp_band'
+			disp_band=varargin{i+1};
 		case 'song_thresh'
 			song_thresh=varargin{i+1};
-		case 'error_buffer'
-			error_buffer=varargin{i+1};
 		case 'colors'
 			colors=varargin{i+1};
 		case 'folder_format'
 			folder_format=varargin{i+1};
 		case 'delimiter'
 			delimiter=varargin{i+1};
-		case 'subdir'
-			subdir=varargin{i+1};
 		case 'ttl_skip'
 			ttl_skip=varargin{i+1};
+		case 'ttl_extract'
+			ttl_extract=varargin{i+1};
 		case 'parse_string'
 			parse_string=varargin{i+1};
 		case 'email_monitor'
@@ -369,7 +359,9 @@ for i=1:length(proc_files)
 					EMAIL_FLAG=1; % don't send another e-mail!
 				end
 
+				movefile(proc_files{i},proc_dir);
 				disp('Could not read file, skipping...');
+				fclose('all'); % read_intan does not properly close file if it bails
 				continue;
 
 			end
@@ -379,15 +371,10 @@ for i=1:length(proc_files)
             		file_datenum=dir2.datenum;
 			file_age=daysdif(file_datenum,datenum(now));
 
-			if file_age>error_buffer
-				disp(['File too old and cannot process, deleting ' proc_files{i}]);
-				delete(proc_files{i});
-				continue;
-			end
-
 			disp([err])
-			disp('Could not read file, continuing...');
+			disp('Could not read file, skipping...');
 			fclose('all'); % read_intan does not properly close file if it bails
+			movefile(proc_files{i},proc_dir);
 			continue;
 		end
 	else
@@ -502,7 +489,6 @@ for i=1:length(proc_files)
 			recid=user_recid;
 		end
 
-		disp(['Parameter setting method:  ' parse_method]);
 		disp(['Processing bird ' num2str(j) ' of ' num2str(nbirds) ]);
 		disp(['File date:  ' datestr(file_datenum)]);
 		disp(['Bird ID:  ' birdid]);
@@ -841,7 +827,7 @@ for i=1:length(proc_files)
 		% finally check for song
 
 
-		if isttl
+		if isttl & ttl_extract
 
 			detection=birdstruct.ttl.data(:)>.5;
 			ext_pts=intan_frontend_collate_idxs(detection,round(audio_pad*birdstruct.ttl.fs));
@@ -851,7 +837,7 @@ for i=1:length(proc_files)
 				disp('Found ttl..');
 
 				intan_frontend_dataextract(bird_split{j},birdstruct,dirstructttl,...
-					ext_pts,disp_minfs,disp_maxfs,colors,'audio',1,'songdet1_','_ttl');
+					ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','_ttl');
 
 				% if we found TTL pulses and ttl_skip is on, skip song detection and move on to next file
 
@@ -864,9 +850,6 @@ for i=1:length(proc_files)
 		end
 
 		% did we detect playback?
-
-		% run song detection on the playback signal...
-
 
 		if isplayback & playback_extract
 		
@@ -888,9 +871,9 @@ for i=1:length(proc_files)
 				disp('Found playback...');
 
 				intan_frontend_dataextract(bird_split{j},birdstruct,dirstructpback,...
-					ext_pts,disp_minfs,disp_maxfs,colors,'playback',1,'songdet1_','_pback');
+					ext_pts,disp_band(1),disp_band(2),colors,'playback',1,'songdet1_','_pback');
 				%intan_frontend_dataextract(bird_split{j},birdstruct,dirstructpback,...
-				%	ext_pts,disp_minfs,disp_maxfs,colors,'audio',1,'songdet1_','');
+				%	ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','');
 
 				if playback_skip
 					disp('Skipping song detection...');
@@ -906,7 +889,7 @@ for i=1:length(proc_files)
 
 			try
 				disp('Entering song detection...');
-				[song_bin,~,~,song_t]=song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,minfs,maxfs,window,...
+				[song_bin,~,~,song_t]=song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,song_band(1),song_band(2),window,...
 					noverlap,songduration,ratio_thresh,song_thresh,pow_thresh);
 			catch err
 				disp([err]);
@@ -925,7 +908,7 @@ for i=1:length(proc_files)
 			if ~isempty(ext_pts)
 				disp(['Song detected in file:  ' proc_files{i}]);
 				intan_frontend_dataextract(bird_split{j},birdstruct,dirstruct,...
-					ext_pts,disp_minfs,disp_maxfs,colors,'audio',1,'songdet1_','');	
+					ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','');	
 			end
 
 		end
@@ -936,7 +919,7 @@ for i=1:length(proc_files)
 
 	end
 
-	% if there is neither a mic nor a TTL signal, store everything
+	% if there is neither a mic nor a TTL signal, store everything?
 
 	clearvars datastruct dirstruct dirstructttl;
 
