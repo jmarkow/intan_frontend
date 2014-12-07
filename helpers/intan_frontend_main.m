@@ -1,8 +1,11 @@
 function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
-%intan_songdet_intmic.m is the core script for processing Intan files
-%on the fly.  
+%intan_frontend_main.m is the core script for processing Intan files
+%on the fly.  Its primary task is to determine which bits of data
+%to keep and which to throw-away.  This has been designed from the ground
+%up to work with RHA/RHD-series Intan recordings aligned to vocalizations,
+%but can easily be configured to work with other types of trial data.  
 %
-%	intan_songdet_intmic(DIR,varargin)
+%	intan_frontend_main(DIR,varargin)
 %
 %	DIR
 %	directory to process 
@@ -26,7 +29,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %		window overlap for song detection (default: 0)
 %
 %		song_thresh
-%		song threshold (default: .27)
+%		song threshold (default: .2)
 %	
 %		songduration
 %		song duration for song detection in secs (default: .8 seconds)
@@ -47,10 +50,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %		maximum fs for spectrograms (default: 7e3)		
 %
 %		filtering
-%		high pass corner for mic trace (default: 700 Hz)
-%
-%		fs
-%		Intan sampling rate (default: 25e3)
+%		high pass corner for mic trace (default: 300 Hz)
 %
 %		audio_pad
 %		extra data to left and right of extraction points to extract (default: .2 secs)
@@ -98,7 +98,6 @@ colors='hot';
 disp_minfs=1;
 disp_maxfs=10e3;
 filtering=300; % changed to 100 from 700 as a more sensible default, leave empty to filter later
-fs=25e3;
 audio_pad=7; % pad on either side of the extraction (in seconds)
 error_buffer=5; % if we can't load a file, how many days old before deleting
 
@@ -363,9 +362,16 @@ for i=1:length(proc_files)
 			datastruct=intan_frontend_readdata(proc_files{i});
 			datastruct.original_filename=proc_files{i};
 
-			if datastruct.filestatus>0 & EMAIL_FLAG==0 & email_monitor>0
-				gmail_send(['File reading error, may need to restart the intan_frontend!']);
-				EMAIL_FLAG=1; % don't send another e-mail!
+			if datastruct.filestatus>0 
+				
+				if EMAIL_FLAG==0 & email_monitor>0
+					gmail_send(['File reading error, may need to restart the intan_frontend!']);
+					EMAIL_FLAG=1; % don't send another e-mail!
+				end
+
+				disp('Could not read file, skipping...');
+				continue;
+
 			end
 
 		catch err
