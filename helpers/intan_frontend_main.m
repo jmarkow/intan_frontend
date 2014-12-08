@@ -60,7 +60,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %
 %
 %
-% see also ephys_pipeline_intmic_daemon.m, song_det.m, im_reformat.m, ephys_pipeline_mkdirs.m
+% see also ephys_pipeline_intmic_daemon.m, zftftb_song_det.m, im_reformat.m, ephys_pipeline_mkdirs.m
 %
 %
 % To run this in daemon mode, run ephys_pipeline_intmic_daemon.m in the directory with unprocessed Intan
@@ -887,17 +887,10 @@ for i=1:length(proc_files)
 
 		if ismic
 
-			try
-				disp('Entering song detection...');
-				[song_bin,~,~,song_t]=song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,song_band(1),song_band(2),window,...
-					noverlap,songduration,ratio_thresh,song_thresh,pow_thresh);
-			catch err
-				disp([err]);
-				disp('Song detection failed, continuing...');
-				fclose('all');
-				continue;
-			end
-
+			disp('Entering song detection...');
+			[song_bin,~,~,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,song_band(1),song_band(2),window,...
+				noverlap,songduration,ratio_thresh,song_thresh,pow_thresh);
+			
 			raw_t=[1:length(birdstruct.audio.norm_data)]./birdstruct.audio.fs;
 
 			% interpolate song detection to original space, collate idxs
