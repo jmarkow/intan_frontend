@@ -35,7 +35,7 @@ if ~isfield(DATA.(SOURCE),'norm_data')
 	DATA.(SOURCE).norm_data=filtfilt(b,a,DATA.(SOURCE).data);
 end
 
-[sonogram_im sonogram_f sonogram_t]=zftftb_pretty_sonogram(DATA.(SOURCE).norm_data,fs,'n',500,'overlap',100,'low',1.5);
+[sonogram_im sonogram_f sonogram_t]=zftftb_pretty_sonogram(DATA.(SOURCE).norm_data,fs,'len',16.7,'overlap',3.3);
 
 startidx=max([find(sonogram_f<=DISP_MINFS)]);
 
@@ -49,7 +49,7 @@ if isempty(stopidx)
 	stopidx=length(sonogram_f);
 end
 
-sonogram_im=sonogram_im(startidx:stopidx,:);
+sonogram_im=sonogram_im(startidx:stopidx,:)*62;
 sonogram_im=flipdim(sonogram_im,1);
 [f,t]=size(sonogram_im);
 im_son_to_vec=(length(DATA.(SOURCE).norm_data)-100)/t;
@@ -112,12 +112,12 @@ for i=1:size(EXT_PTS,1)
 
 	sonogram_im(1:10,ceil(startpoint/im_son_to_vec):ceil(endpoint/im_son_to_vec))=62;
 
-	[chunk_sonogram_im chunk_sonogram_f chunk_sonogram_t]=zftftb_pretty_sonogram(EXTDATA.(SOURCE).norm_data,fs,'n',500,'overlap',300,'low',1.5);
+	[chunk_sonogram_im chunk_sonogram_f chunk_sonogram_t]=zftftb_pretty_sonogram(EXTDATA.(SOURCE).norm_data,fs,'len',16.7,'overlap',10);
 
 	startidx=max([find(chunk_sonogram_f<=DISP_MINFS)]);
 	stopidx=min([find(chunk_sonogram_f>=DISP_MAXFS)]);
 
-	chunk_sonogram_im=chunk_sonogram_im(startidx:stopidx,:);
+	chunk_sonogram_im=chunk_sonogram_im(startidx:stopidx,:)*62;
 	chunk_sonogram_im=flipdim(chunk_sonogram_im,1);
 	[f,t]=size(chunk_sonogram_im);
 	chunk_im_son_to_vec=(length(EXTDATA.(SOURCE).data)-300)/t;

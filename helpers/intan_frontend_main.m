@@ -68,15 +68,14 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 
 % while running the daemon this can be changed 
 
-ratio_thresh=2; % power ratio between song and non-song band
-window=250; % window to calculate ratio in (samples)
-noverlap=0; % just do no overlap, faster
+song_ratio=2; % power ratio between song and non-song band
+song_len=.005; % window to calculate ratio in (ms)
+song_overlap=0; % just do no overlap, faster
 song_thresh=.2; % between .2 and .3 seems to work best (higher is more exlusive)
 song_band=[2e3 6e3];
-pow_thresh=.05; % raw power threshold (so extremely weak signals are excluded)
-songduration=.8; % moving average of ratio
-low=5;
-high=10;
+song_pow=.05; % raw power threshold (so extremely weak signals are excluded)
+song_duration=.8; % moving average of ratio
+clipping=-3;
 colors='hot';
 disp_band=[1 10e3];
 filtering=300; % changed to 100 from 700 as a more sensible default, leave empty to filter later
@@ -198,6 +197,14 @@ for i=1:2:nparams
 			disp_band=varargin{i+1};
 		case 'song_thresh'
 			song_thresh=varargin{i+1};
+		case 'song_ratio'
+			song_ratio=varargin{i+1};
+		case 'song_duration'
+			song_duration=varargin{i+1};
+		case 'song_pow'
+			song_pow=varargin{i+1};
+		case 'song_len'
+			song_len=varargin{i+1};
 		case 'colors'
 			colors=varargin{i+1};
 		case 'folder_format'
@@ -888,8 +895,9 @@ for i=1:length(proc_files)
 		if ismic
 
 			disp('Entering song detection...');
-			[song_bin,~,~,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,song_band(1),song_band(2),window,...
-				noverlap,songduration,ratio_thresh,song_thresh,pow_thresh);
+			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
+				'len',song_len,'overlap',song_overlap,'song_duration',song_duration,...
+				'ratio_thresh',song_ratio,'song_thresh',song_thresh,'pow_thresh',song_pow);
 			
 			raw_t=[1:length(birdstruct.audio.norm_data)]./birdstruct.audio.fs;
 
