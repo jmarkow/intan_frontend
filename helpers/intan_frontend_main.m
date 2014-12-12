@@ -837,7 +837,7 @@ for i=1:length(proc_files)
 		if isttl & ttl_extract
 
 			detection=birdstruct.ttl.data(:)>.5;
-			ext_pts=intan_frontend_collate_idxs(detection,round(audio_pad*birdstruct.ttl.fs));
+			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.ttl.fs));
 
 			if ~isempty(ext_pts)
 
@@ -871,7 +871,7 @@ for i=1:length(proc_files)
 			rms=sqrt(smooth(birdstruct.playback.norm_data.^2,rmswin_smps));
 
 			detection=rms>playback_thresh;
-			ext_pts=intan_frontend_collate_idxs(detection,round(audio_pad*birdstruct.playback.fs));
+			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.playback.fs));
 
 			if ~isempty(ext_pts)
 
@@ -904,7 +904,7 @@ for i=1:length(proc_files)
 			% interpolate song detection to original space, collate idxs
 
 			detection=interp1(song_t,double(song_bin),raw_t,'nearest'); 
-			ext_pts=intan_frontend_collate_idxs(detection,round(audio_pad*birdstruct.audio.fs));
+			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.audio.fs));
 
 			if ~isempty(ext_pts)
 				disp(['Song detected in file:  ' proc_files{i}]);
