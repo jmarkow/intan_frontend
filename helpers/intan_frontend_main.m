@@ -132,6 +132,8 @@ recid='';
 parse_options='';
 last_file=clock;
 
+% TODO: option for custom e-mail function (just map to anonymous function)
+
 file_check=5; % how long to wait between file reads to check if file is no longer being written (in seconds)
 
 mfile_path = mfilename('fullpath');
@@ -235,6 +237,10 @@ for i=1:2:nparams
 			recid=varargin{i+1};
 	end
 end
+
+% TODO: use separate flags for file reading and waiting errors
+% 	give option to send e-mail if multiple errors come up
+% 	right now it's too sensitive
 
 if ~isempty(parse_options)
 
