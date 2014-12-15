@@ -63,7 +63,7 @@ Underscore `_` is the default delimiter, but this can be changed in the [script 
 lb119_LeftHVC_mic1adc_playback3adc
 ```
 
-This means that the animal ID is lb119 the recording ID is LeftHVC and the final two options specify where task-relevant data can be found (more on these [here](#filename-options).  The extracted data will be placed in:
+This means that the animal ID is lb119 the recording ID is LeftHVC and the final two options specify where task-relevant data can be found (more on these [here] (#filename-options)).  The extracted data will be placed in:
 
 ```
 intan_data/lb119/LeftHVC/YYYY-MM-DD
@@ -149,11 +149,11 @@ There are lots and lots of options to specify how things run "under-the-hood", e
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `song_band` | Lower and upper edge of song detection band | `[2e3 6e3]` |
-| `window` | Song detection fft window (samples) | `250` |
-| `noverlap` | Song detection fft overlap (samples) | `0` |
-| `ratio_thresh` | Song detection in:out power ratio threshold | `2` |
-| `pow_thresh` | Song detection power threshold | `.3` |
-| `songduration` | Song detection smoothing parameter (seconds) | `.8` | 
+| `song_len` | Song detection fft window (s) | `.005` |
+| `song_overlap` | Song detection fft overlap (s) | `0` |
+| `song_ratio` | Song detection in:out power ratio threshold | `2` |
+| `song_pow` | Song detection power threshold | `.3` |
+| `song_duration` | Song detection smoothing parameter (seconds) | `.8` | 
 | `song_thresh` | Song detection final threshold | `.2` |
 | `folder_format` | Extracted data folder format (MATLAB datestring format) | `yyyy-mm-dd` | 
 | `delimiter` | Delimiter used to parse filename options | `_`|
