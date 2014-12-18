@@ -20,7 +20,7 @@ The input is RHA/RHD acquisition board-generated data, and the output is automat
 
 ###Requirements
 
-This has been tested using MATLAB 2010A and later on Windows and Mac (Linux should be fine).  The only Toolbox required is the Signal Processing toolbox. 
+This has been tested using MATLAB 2010A and later on Windows and Mac (Linux should be fine). You must have the [markolab](https://github.com/jmarkow/markolab) and [zftftb](https://github.com/jmarkow/zftftb) toolboxes in your MATLAB path. The only MATLAB Toolbox required is the Signal Processing toolbox. 
 
 ###Data types
 
