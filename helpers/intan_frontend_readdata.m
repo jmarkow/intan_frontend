@@ -105,8 +105,8 @@ switch lower(ext)
 		end
 
 		if ~isempty(adc)
-		    DATASTRUCT.adc.labels=cat(1,adc.channels(:).native_order)';
-		    DATASTRUCT.adc.data=adc.data';
+		    	DATASTRUCT.adc.labels=cat(1,adc.channels(:).native_order)';
+		    	DATASTRUCT.adc.data=adc.data';
 			DATASTRUCT.adc.fs=parameters.board_adc_sample_rate;
 			DATASTRUCT.adc.t=adc.t(:);
 	   	end
@@ -119,6 +119,17 @@ switch lower(ext)
 
 		% open ephys extraction code here
 		% add option for open ephys?
+
+	case '.mat'
+
+		% assumes my custom MATLAB format (TODO:  add support for custom loading function)
+		
+		load([FILENAME],'data');
+
+		DATASTRUCT.adc.labels=data.labels;
+		DATASTRUCT.adc.data=data.voltage;
+		DATASTRUCT.adc.fs=data.fs;
+		DATASTRUCT.adc.t=data.t;
 
 	otherwise
 		error('Could not recognize file type %s ', ext);
