@@ -515,6 +515,7 @@ for i=1:length(proc_files)
 		disp(['Playback source:  ' playback_source]);
 		disp(['Data ports:  ' ports]);
 		disp(['File status:  ' num2str(datastruct.filestatus)]);
+		
 		% now create the folder it doesn't exist already
 
 		foldername=fullfile(root_dir,birdid,recid,datestr(file_datenum,folder_format));	
@@ -617,6 +618,10 @@ for i=1:length(proc_files)
 					birdstruct.adc.data(:,playback_channel)=[];
 					birdstruct.adc.labels(playback_channel)=[];
 
+					if isfield(birdstruct.adc,'names')
+						birdstruct.adc.names(playback_channel)=[];
+					end
+
 					if isempty(birdstruct.adc.data)
 						birdstruct.adc.t=[];
 					end
@@ -632,6 +637,10 @@ for i=1:length(proc_files)
 
 					birdstruct.digin.data(:,playback_channel)=[];
 					birdstruct.digin.labels(playback_channel)=[];
+
+					if isfield(birdstruct.digin,'names')
+						birdstruct.digin.names(playback_channel)=[];
+					end
 
 					if isempty(birdstruct.digin.data)
 						birdstruct.digin.t=[];
@@ -677,6 +686,10 @@ for i=1:length(proc_files)
 					birdstruct.adc.data(:,ttl_channel)=[];
 					birdstruct.adc.labels(ttl_channel)=[];
 
+					if isfield(birdstruct.adc,'names')
+						birdstruct.adc.names(ttl_channel)=[];
+					end
+
 					if isempty(birdstruct.adc.data)
 						birdstruct.adc.t=[];
 					end
@@ -692,6 +705,10 @@ for i=1:length(proc_files)
 
 					birdstruct.digin.data(:,ttl_channel)=[];
 					birdstruct.digin.labels(ttl_channel)=[];
+
+					if isfield(birdstruct.digin,'names')
+						birdstruct.digin.names(ttl_channel)=[];
+					end
 
 					if isempty(birdstruct.digin.data)
 						birdstruct.digin.t=[];
@@ -723,6 +740,10 @@ for i=1:length(proc_files)
 					birdstruct.ephys.data(:,mic_channels)=[];
 					birdstruct.ephys.labels(mic_channel)=[];
 
+					if isfield(birdstruct.ephys,'names')
+						birdstruct.ephys.names(mic_channel)=[];
+					end
+
 					if isempty(birdstruct.ephys.data)
 						birdstruct.ephys.t=[];
 					end
@@ -738,6 +759,10 @@ for i=1:length(proc_files)
 					birdstruct.aux.data(:,mic_channel)=[];
 					birdstruct.aux.labels(mic_channel)=[];
 
+					if isfield(birdstruct.aux,'names')
+						birdstruct.aux.names(mic_channel)=[];
+					end
+
 					if isempty(birdstruct.aux.data)
 						birdstruct.aux.t=[];
 					end
@@ -752,6 +777,10 @@ for i=1:length(proc_files)
 
 					birdstruct.adc.data(:,mic_channel)=[];
 					birdstruct.adc.labels(mic_channel)=[];
+
+					if isfield(birdstruct.adc,'names')
+						birdstruct.adc.names(mic_channel)=[];
+					end
 
 					if isempty(birdstruct.adc.data)
 						birdstruct.adc.t=[];

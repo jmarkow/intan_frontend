@@ -130,6 +130,11 @@ switch lower(ext)
 		DATASTRUCT.adc.data=data.voltage;
 		DATASTRUCT.adc.fs=data.fs;
 		DATASTRUCT.adc.t=data.t;
+		DATASTRUCT.adc.names=data.names;
+
+		if isfield(data,'parameters')
+			DATASTRUCT.parameters=data.parameters;
+		end
 
 	otherwise
 		error('Could not recognize file type %s ', ext);
