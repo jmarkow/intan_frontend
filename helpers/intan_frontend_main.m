@@ -60,7 +60,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %
 %
 %
-% see also ephys_pipeline_intmic_daemon.m, zftftb_song_det.m, im_reformat.m, ephys_pipeline_mkdirs.m
+% see also zftftb_song_det.m, im_reformat.m
 %
 %
 % To run this in daemon mode, run ephys_pipeline_intmic_daemon.m in the directory with unprocessed Intan
@@ -97,7 +97,7 @@ wav_pre='wav';
 data_pre='mat';
 sleep_pre='sleep';
 
-delimiter='\_'; % delimiter for splitting fields in filename
+delimiter='_'; % delimiter for splitting fields in filename
 bird_delimiter='\&'; % delimiter for splitting multiple birds
 
 % sleep parameters
@@ -235,6 +235,8 @@ for i=1:2:nparams
 			birdid=varargin{i+1};
 		case 'recid'
 			recid=varargin{i+1};
+        case 'root_dir'
+            root_dir=varargin{i+1};
 	end
 end
 
@@ -244,15 +246,13 @@ end
 
 if ~isempty(parse_options)
 
-	if parse_options(end)~=delimiter
-		parse_options(end+1)=delimiter;
+	if parse_options(1)~=delimiter
+		parse_options=[delimiter parse_options ];
 	end
 
-	if parse_options(1)~=delimiter
-		tmp=delimiter;
-		tmp(2:length(parse_options)+1)=parse_options;
-		parse_options=tmp;
-	end
+	%if parse_options(end)~=delimiter
+	%	parse_options=[parse_options delimiter];
+    	%end
 
 end
 
@@ -280,7 +280,7 @@ filelisting(isdir)=[];
 % read in appropriate suffixes 
 
 filenames={filelisting(:).name};
-hits=regexp(filenames,'\.(rhd|int)','match');
+hits=regexp(filenames,'\.(rhd|int|mat)','match');
 hits=cellfun(@length,hits)>0;
 
 filenames(~hits)=[];
@@ -306,7 +306,6 @@ tmp_hits=regexp(tmp_filenames,'\.(rhd|int)','match');
 tmp_hits=cellfun(@length,tmp_hits)>0;
 tmp_filelisting=tmp_filelisting(tmp_hits);
 tmp_datenums=cat(1,tmp_filelisting(:).datenum);
-
 
 if email_monitor>0 & EMAIL_FLAG==0
 
@@ -353,8 +352,12 @@ for i=1:length(proc_files)
 	pause(file_check);
 	dir2=dir(proc_files{i});
 
-	bytedif=dir1.bytes-dir2.bytes;
-
+    try
+        bytedif=dir1.bytes-dir2.bytes;
+    catch
+        pause(10);
+        bytedif=dir1.bytes-dir2.bytes;
+    end
 	% if we haven't written any new data in the past (file_check) seconds, assume
 	% file has been written
 
@@ -445,8 +448,16 @@ for i=1:length(proc_files)
 	% independently for each bird
 
 	bird_split=regexp(name,bird_delimiter,'split');
-
 	tokens=regexp(bird_split{end},delimiter,'split');
+    	
+	nbirds=length(bird_split);
+	last_bird=tokens{1};
+
+	for j=2:length(tokens)-2
+		last_bird=[ last_bird delimiter tokens{j} ];
+	end
+	
+	bird_split{nbirds}=last_bird;
 
 	% get the date tokens from the last bird, append to all others
 
@@ -457,8 +468,6 @@ for i=1:length(proc_files)
 	for j=1:length(datetokens)
 		datestring=[ datestring delimiter(end) tokens{datetokens(j)} ];
 	end
-
-	nbirds=length(bird_split);
 
 	% clear out all extraction variables to be safe
 
@@ -483,11 +492,10 @@ for i=1:length(proc_files)
 		chunk_sonogram_im=[];
 
 		% parse the file using the format string, insert parse options for manual option setting
+      
 
-		if j<nbirds
-			bird_split{j}=[bird_split{j} parse_options datestring];
-		end
-
+		bird_split{j}=[bird_split{j} parse_options datestring];
+        
 		% auto_parse
 
 		[birdid,recid,mic_trace,mic_source,mic_port,ports,ttl_trace,ttl_source,...

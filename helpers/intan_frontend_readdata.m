@@ -129,7 +129,7 @@ switch lower(ext)
 		DATASTRUCT.adc.labels=data.labels;
 		DATASTRUCT.adc.data=data.voltage;
 		DATASTRUCT.adc.fs=data.fs;
-		DATASTRUCT.adc.t=data.t;
+		DATASTRUCT.adc.t=data.time;
 		DATASTRUCT.adc.names=data.names;
 
 		if isfield(data,'parameters')
