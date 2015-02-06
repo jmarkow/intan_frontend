@@ -63,7 +63,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 % see also zftftb_song_det.m, im_reformat.m
 %
 %
-% To run this in daemon mode, run ephys_pipeline_intmic_daemon.m in the directory with unprocessed Intan
+% To run this in daemon mode, intan_frontend_daemon.m in the directory with unprocessed Intan
 % files.  Be sure to create the appropriate directory structure using epys_pipeline_mkdirs.m first.
 
 % while running the daemon this can be changed 
@@ -71,9 +71,9 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 song_ratio=2; % power ratio between song and non-song band
 song_len=.005; % window to calculate ratio in (ms)
 song_overlap=0; % just do no overlap, faster
-song_thresh=.2; % between .2 and .3 seems to work best (higher is more exlusive)
+song_thresh=.25; % between .2 and .3 seems to work best (higher is more exlusive)
 song_band=[2e3 6e3];
-song_pow=.05; % raw power threshold (so extremely weak signals are excluded)
+song_pow=-inf; % raw power threshold (so extremely weak signals are excluded)
 song_duration=.8; % moving average of ratio
 clipping=-3;
 colors='hot';
@@ -296,8 +296,8 @@ clear filenames;
 % auto-delete days
 
 if ~isempty(auto_delete_int)
-	auto_delete(proc_dir,auto_delete_int,'rhd');
-	auto_delete(proc_dir,auto_delete_int,'int'); 
+	intan_frontend_auto_delete(proc_dir,auto_delete_int,'rhd');
+	intan_frontend_auto_delete(proc_dir,auto_delete_int,'int'); 
 end
 
 tmp_filelisting=dir(fullfile(DIR));
