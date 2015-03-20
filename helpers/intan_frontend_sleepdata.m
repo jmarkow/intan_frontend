@@ -61,14 +61,15 @@ if time_elapsed>=SLEEP_FILEINTERVAL*60
 
 	disp(['Keeping ' num2str(SLEEP_SEGMENT) ' seconds of data']);
 
-	if length(DATA.audio.data)<stopsample
-		disp('File too short to keep, skipping...');
-		return;
-	end
-	
+
 	for j=1:length(data_types)
 		if ~isempty(DATA.(data_types{j}).data)
 			stopsample=round(SLEEP_SEGMENT*DATA.(data_types{j}).fs);
+			
+			if stopsample>length(DATA.(data_types{j}).data)
+				stopsample=length(DATA.(data_types{j}).data);
+			end
+			
 			DATA.(data_types{j}).data=DATA.(data_types{j}).data(1:stopsample,:);
 			DATA.(data_types{j}).t=DATA.(data_types{j}).t(1:stopsample);
 		end
