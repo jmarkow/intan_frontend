@@ -745,7 +745,7 @@ for i=1:length(proc_files)
 					birdstruct.audio.fs=birdstruct.ephys.fs;
 					birdstruct.audio.t=birdstruct.ephys.t;
 
-					birdstruct.ephys.data(:,mic_channels)=[];
+					birdstruct.ephys.data(:,mic_channel)=[];
 					birdstruct.ephys.labels(mic_channel)=[];
 
 					if isfield(birdstruct.ephys,'names')
