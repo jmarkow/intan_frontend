@@ -62,7 +62,9 @@ if strcmp(FMT,'auto') & length(tokens)>=2
 			fprintf(1,'Detected ttl token at %i\n',ttltoken);
 		end
 
-		porttoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'port'))))+2;
+		% port token must be isolated
+
+		porttoken=max(find(~cellfun(@isempty,regexpi(tokens(3:end),'^port[a-z]'))))+2;
 
 		if ~isempty(porttoken)
 			fprintf(1,'Detected port token at %i\n',porttoken);
