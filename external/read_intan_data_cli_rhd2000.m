@@ -34,7 +34,6 @@ for i=1:2:nparams
 end
 
 [fid msg] = fopen(FILE, 'r');
-fid2 = fopen(FILE, 'r');
 
 s = dir(FILE);
 filesize = s.bytes;
