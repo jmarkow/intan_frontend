@@ -298,6 +298,7 @@ clear filenames;
 if ~isempty(auto_delete_int)
 	intan_frontend_auto_delete(proc_dir,auto_delete_int,'rhd');
 	intan_frontend_auto_delete(proc_dir,auto_delete_int,'int'); 
+	intan_frontend_auto_delete(proc_dir,auto_delete_int,'mat'); 
 end
 
 tmp_filelisting=dir(fullfile(DIR));

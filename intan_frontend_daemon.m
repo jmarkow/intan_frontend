@@ -34,6 +34,7 @@ end
 
 email_flag=0; % did we send an e-mail? initialize as 0
 last_file=clock; % when was the last file processed?
+interval=120;
 
 while 1==1
 	
@@ -41,5 +42,5 @@ while 1==1
 
 	[email_flag,last_file]=intan_frontend_main(DIR,varargin{:},'email_flag',email_flag,'last_file',last_file);
 	disp(['Email flag:  ' num2str(email_flag)]);
-	pause(10);
+	pause(interval);
 end
