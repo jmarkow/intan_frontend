@@ -121,11 +121,11 @@ This is followed by the *channel* then the *source*.  The data source can be (re
 
 | Source | Text | Notes |
 |--------|------|-------|
-| ADC | c | Acquisition board ADC |
+| ADC | adc | Acquisition board ADC |
 | Digital input | digin | Acquisition board digital input |
 | Digital output | digout | Acquisition board digital output |
 | Ephys channel | m | Headstage ephys amplifier |
-| AUX | a | Headstage auxiliary input |
+| AUX | aux | Headstage auxiliary input |
 
 So to indicate that you're recording audio data on ADC-0 and playback data on ADC-1 with animal LDR4 with recording ID NCM:
 
