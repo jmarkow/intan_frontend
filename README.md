@@ -95,7 +95,7 @@ Data contained in the `gif` and `wav` directories should be self-explanatory.  T
 | Variable | Data type | Description |
 |----------|-----------|-------------|
 | ttl | structure (fields: fs, data, time) | Contains TTL trace |
-| ephys | structure (fields: fs, data, time, labels, ports) | Contains epyhys data |
+| ephys | structure (fields: fs, data, time, labels, ports) | Contains ephys data |
 | audio | structure (fields: fs, data, time) | Contains audio data |
 | playback | structure (fields: fs, data, time) | Contains playback data |
 | file_datenum | MATLAB date number | File first write datestamp |
@@ -135,7 +135,7 @@ LD4_NCM_mic0adc_playback1adc
 
 By default, audio and playback data will be saved in the MATLAB files, while spectrograms and wav files will only contain the audio data from ADC-0 (the script can generate spectrograms and wav files for the playback data by specifying [script options](#script-options).  
 
-Also, multiple animals can be specified using the `bird_delimiter` (see [script options](#script-options).  For instance:
+Also, multiple animals can be specified using the `bird_delimiter` (see [script options](#script-options)).  For instance:
 
 ```
 LD4_NCM_mic0adc_playback1adc&rm7_HVC_mic2adc_ttl4digin
