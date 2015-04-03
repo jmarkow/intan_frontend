@@ -235,8 +235,8 @@ for i=1:2:nparams
 			birdid=varargin{i+1};
 		case 'recid'
 			recid=varargin{i+1};
-        case 'root_dir'
-            root_dir=varargin{i+1};
+        	case 'root_dir'
+            		root_dir=varargin{i+1};
 	end
 end
 
@@ -303,7 +303,7 @@ end
 
 tmp_filelisting=dir(fullfile(DIR));
 tmp_filenames={tmp_filelisting(:).name};
-tmp_hits=regexp(tmp_filenames,'\.(rhd|int)','match');
+tmp_hits=regexp(tmp_filenames,'\.(rhd|int|mat)','match');
 tmp_hits=cellfun(@length,tmp_hits)>0;
 tmp_filelisting=tmp_filelisting(tmp_hits);
 tmp_datenums=cat(1,tmp_filelisting(:).datenum);
