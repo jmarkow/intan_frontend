@@ -133,7 +133,7 @@ So to indicate that you're recording audio data on ADC-0 and playback data on AD
 LD4_NCM_mic0adc_playback1adc
 ```
 
-By default, audio and playback data will be saved in the MATLAB files, while spectrograms and wav files will only contain the audio data from ADC-0 (the script can generate spectrograms and wav files for the playback data by specifying [script options](#script-options).  
+By default, audio and playback data will be saved in the MATLAB files, while spectrograms and wav files will only contain the audio data from ADC-0 (the script can generate spectrograms and wav files for the playback data by specifying [script options](#script-options)).  
 
 Also, multiple animals can be specified using the `bird_delimiter` (see [script options](#script-options)).  For instance:
 
