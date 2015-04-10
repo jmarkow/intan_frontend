@@ -499,32 +499,18 @@ for i=1:length(proc_files)
         
 		% auto_parse
 
-		[birdid,recid,mic_trace,mic_source,mic_port,ports,ttl_trace,ttl_source,...
-			playback_trace,playback_source,data_trace,data_source,file_datenum]=...
+		[tokens,ports,file_datenum]=...
 			intan_frontend_fileparse(bird_split{j},delimiter,parse_string,date_string);
 
 		if ~isempty(user_birdid)
-			birdid=user_birdid;
+			tokens.birdid=user_birdid;
 		end
 
 		if ~isempty(user_recid)
-			recid=user_recid;
+			tokens.recid=user_recid;
 		end
 
 		disp(['Processing bird ' num2str(j) ' of ' num2str(nbirds) ]);
-		disp(['File date:  ' datestr(file_datenum)]);
-		disp(['Bird ID:  ' birdid]);
-		disp(['Rec ID:  ' recid]);
-		disp(['Mic ch:  ' num2str(mic_trace)]);
-		disp(['Mic source:  ' mic_source]);
-		disp(['Mic port:  ' mic_port]);
-		disp(['TTL ch:  ' num2str(ttl_trace)]);
-		disp(['TTL source:  ' ttl_source]);
-		disp(['Data ch:  ' num2str(data_trace)]);
-		disp(['Data source:  ' num2str(data_source)]);
-		disp(['Playback ch:  ' num2str(playback_trace)]);
-		disp(['Playback source:  ' playback_source]);
-		disp(['Data ports:  ' ports]);
 		disp(['File status:  ' num2str(datastruct.filestatus)]);
 		
 		% now create the folder it doesn't exist already
@@ -607,7 +593,7 @@ for i=1:length(proc_files)
 
 		% standard song detection
 
-		ismic=~isempty(mic_trace);
+		ismic=~isfield(mic_trace);
 		isttl=~isempty(ttl_trace);
 		isplayback=~isempty(playback_trace);
 		isdata=~isempty(data_trace);

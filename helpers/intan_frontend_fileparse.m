@@ -1,4 +1,4 @@
-function [BIRDID,RECID,MICTRACE,MICSOURCE,MICPORT,PORTS,TTLTRACE,TTLSOURCE,PLAYBACKTRACE,PLAYBACKSOURCE,DATATRACE,DATASOURCE,DATENUM]=frontend_fileparse(FILENAME,DELIM,FMT,DATEFMT)
+function [PARSED PORTS DATENUM]=frontend_fileparse(FILENAME,DELIM,DATEFMT)
 %frontend_fileparse
 %
 %	frontend_fileparse(FILENAME,DELIM,FMT)
@@ -9,284 +9,124 @@ function [BIRDID,RECID,MICTRACE,MICSOURCE,MICPORT,PORTS,TTLTRACE,TTLSOURCE,PLAYB
 %
 %	FMT
 %
-%	
 
-% B=subject name
-% I=recording ID
-% M=microphone
-% T=ttl
-% D=date
-
-if nargin<4 | isempty(DATEFMT), DATEFMT='yymmddHHMMSS'; end
-if nargin<3 | isempty(FMT), FMT='bimpdd'; end
+if nargin<3 | isempty(DATEFMT), DATEFMT='yymmddHHMMSS'; end
 if nargin<2 | isempty(DELIM), DELIM='\_'; end
 if nargin<1 | isempty(FILENAME), error('Need filename to continue!'); end
 
-BIRDID=[];
-RECID=[];
-MICTRACE=[];
-MICSOURCE='';
-MICPORT='';
-TTLTRACE=[];
-TTLSOURCE='';
-PLAYBACKTRACE=[];
-PLAYBACKSOURCE=[];
 DATENUM=[];
 PORTS='';
-DATATRACE=[];
-DATASOURCE=[];
+PARSED=[];
 
 port_labels='abcd';
 
 [path,filename,ext]=fileparts(FILENAME);
-tokens=regexpi(filename,DELIM,'split');
+filesplit=regexpi(filename,DELIM,'split');
 
-if strcmp(FMT,'auto') & length(tokens)>=2
+token.names={'mic','ttl','data_port','playback','data'};
+token.parse_strings={'mic','ttl','^port[a-z]\+','playback','data'};
 
-	%%% find various tokens
+if length(filesplit)>2
+	for i=1:length(token.names)
+	
+		idx=max(find(~cellfun(@isempty,strfind(filesplit(3:end),...
+			token.parse_strings{i}))));
 
-	birdtoken=1;
-	rectoken=2;
-
-	disp('Detecting token positions');
-
-	if length(tokens)>2
-
-		mictoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'mic'))))+2;
-
-		if ~isempty(mictoken)
-			fprintf(1,'Detected mic token at %i\n',mictoken);
-		end
-
-		ttltoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'ttl'))))+2;
-
-		if ~isempty(ttltoken)
-			fprintf(1,'Detected ttl token at %i\n',ttltoken);
-		end
-
-		% port token must be isolated
-
-		porttoken=max(find(~cellfun(@isempty,regexpi(tokens(3:end),'^port[a-z]'))))+2;
-
-		if ~isempty(porttoken)
-			fprintf(1,'Detected port token at %i\n',porttoken);
-		end
-
-		playbacktoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'playback'))))+2;
-
-		if ~isempty(playbacktoken)
-			fprintf(1,'Detected playback token at %i\n',playbacktoken);
-		end
-
-		datatoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'data'))))+2;
-		
-		if ~isempty(datatoken)
-			fprintf(1,'Detected data token at %i\n',datatoken);
+		if ~isempty(idx)
+			fprintf(1,'Found %s token at position %i\n',token.names{i},idx+2);
+			token.result.(token.names{i})=idx+2;
 		end
 
 	end
 
-	datetoken=length(tokens);
-	datetoken=[datetoken-1:datetoken];
+end
+
+% these are hardcoded, first is always bird id, second is recording id
+
+PARSED.birdid=filesplit{1};
+PARSED.recid=filesplit{2};
+
+fprintf('Bird ID:\t%s\nRecording ID:\t%s\n',PARSED.birdid,PARSED.recid)
+
+% datetoken is the last two
+
+datetoken=length(filesplit);
+datetoken=[datetoken-1:datetoken];
  
-	fprintf(1,'Assuming date tokens in positions %i and %i\n',datetoken(1),datetoken(2));
-
-else
-	
-	birdtoken=strfind(lower(FMT),'b');
-	rectoken=strfind(lower(FMT),'i');
-	mictoken=strfind(lower(FMT),'m');
-	ttltoken=strfind(lower(FMT),'t');
-	datetoken=strfind(lower(FMT),'d');
-	porttoken=strfind(lower(FMT),'p');
-	playbacktoken=strfind(lower(FMT),'y');
-	datatoken=strfind(lower(FMT),'a');
-
-end
-
-% first token should be bird number
-
-if ~isempty(birdtoken)
-	BIRDID=tokens{birdtoken};
-else
-	BIRDID='birdname';
-end
-
-% second should be recording tag (normally nucleus)
-
-if ~isempty(rectoken)
-	RECID=tokens{rectoken};
-else
-	RECID='RECID';
-end
+fprintf('Assuming date tokens in positions %i and %i\n',datetoken(1),datetoken(2));
 
 % third should be mic trace
 
-if ~isempty(mictoken)
-	string=tokens{mictoken};
-	[mictokens,startpoint,endpoint]=regexpi(string,'\d+','match');
+foundtokens=fieldnames(token.result);
 
-	if isempty(mictokens)
-		error('Could not find mic trace at token %g for file %s', mictoken,FILENAME);
-	end
+for i=1:length(foundtokens)
 
-	MICTRACE=str2num(mictokens{1});
+	string=filesplit{token.result.(foundtokens{i})};
+	[channel,~,endpoint]=regexpi(string,'\d+','match');
 
-	if length(string)>endpoint
-		tmp=string(endpoint+1:end);
+	fprintf('%s:\t',foundtokens{i});
 
-		if strcmp(lower(tmp(1)),'m')
-			MICSOURCE='m';
-		elseif strcmp(lower(tmp(1:2)),'au') 
-			MICSOURCE='a';
-		elseif strcmp(lower(tmp(1:2)),'ad')
-			MICSOURCE='c';
-		else
-			warning('Did not understand mic source %s setting to main.',tmp);
-			MICSOURCE='m';
-		end
-	else
-		warning('No microphone source given, set to main');
-		MICSOURCE='m';
-	end
-
-	% need a port if we're using ephys channels for the mic
-
-	[port,startpoint,endpoint]=regexpi(string,'port','match');
-
-	if strcmp(MICSOURCE,'m')
-		if ~isempty(port)
-			MICPORT=string(endpoint+1);
-		else
-			warning('Could not find microphone port, setting to A');
-			MICPORT='A';
-		end
-	end
-end
-
-
-if ~isempty(ttltoken)
-	string=tokens{ttltoken};
-	[ttltokens,startpoint,endpoint]=regexpi(string,'\d+','match');
-
-	if isempty(ttltokens)
-		error('Could not find ttl trace at token %g for file %s', ttltoken,FILENAME);
-	end
-
-	TTLTRACE=str2num(ttltokens{1});	
-
-	if length(string)>endpoint
-		tmp=string(endpoint+1:end);
-
-		if strcmp(lower(tmp(1)),'m')
-			TTLSOURCE='m';
-		elseif strcmp(lower(tmp(1:2)),'au') 
-			TTLSOURCE='a';
-		elseif strcmp(lower(tmp(1:2)),'ad')
-			TTLSOURCE='c';
-		elseif strcmp(lower(tmp(1)),'d')
-			TTLSOURCE='d';
-		else
-			warning('Did not understand TTL source %s setting to digital in.',tmp);
-			TTLSOURCE='d';
-		end
-	else
-		warning('No TTL source given, set to digital in');
-		TTLSOURCE='d';
-	end
-end
-
-if ~isempty(datatoken)
-	
-	string=tokens{datatoken};
-	[datatokens,startpoint,endpoint]=regexpi(string,'\d+','match');
-
-	if isempty(datatokens)
-		error('Could not find data trace at token %g for file %s', datatoken,FILENAME);
-	end
-
-	DATATRACE=[];
-
-	for i=1:length(datatokens)
-		DATATRACE(i)=str2num(datatokens{i});
+	if ~isempty(channel)
+		PARSED.(foundtokens{i}).trace=str2num(channel{1});
+		fprintf('channel %i\t',PARSED.(foundtokens{i}).trace);
 	end
 
 	if length(string)>endpoint
 		tmp=string(endpoint+1:end);
-
 		if strcmp(lower(tmp(1)),'m')
-			DATASOURCE='m';
-		elseif strcmp(lower(tmp(1:2)),'au') 
-			DATASOURCE='a';
+			tmp_source='main';
+		elseif strcmp(lower(tmp(1:2)),'au')
+			tmp_source='aux';
 		elseif strcmp(lower(tmp(1:2)),'ad')
-			DATASOURCE='c';
-		elseif strcmp(lower(tmp(1)),'d')
-			DATASOURCE='d';
+			tmp_source='adc';
 		else
-			warning('Did not understand DATA source %s setting to digital in.',tmp);
-			DATASOURCE='d';
+			warning('Did not understand %s source setting %s',foundtokens{i},tmp);
+			tmp_source='main';
 		end
 	else
-		warning('No DATA source given, set to digital in');
-		DATASOURCE='d';
+		warning('Did not understand %s source setting',foundtokens{i});
+		tmp_source='main';
 	end
+
+	PARSED.(foundtokens{i}).source=tmp_source;
+	fprintf('source %s\t',PARSED.(foundtokens{i}).source);
+
+
+	[port,~,endpoint]=regexpi(string,'port','match');
+
+	if ~isempty(port) & length(string)>endpoint
+		tmp=lower(string(endpoint+1:end));
+		PARSED.(foundtokens{i}).port=tmp(1);
+		fprintf('port %s\t',PARSED.(foundtokens{i}).port);
+	end
+
+	fprintf('\n');
+
 end
 
-if ~isempty(playbacktoken)
-	string=tokens{playbacktoken};
-	[playbacktokens,startpoint,endpoint]=regexpi(string,'\d+','match');
 
-	if isempty(playbacktokens)
-		error('Could not find playback trace at token %g for file %s', playbacktoken,FILENAME);
-	end
+if isfield(PARSED,'port')
 
-	PLAYBACKTRACE=str2num(playbacktokens{1});	
-
-	if length(string)>endpoint
-		tmp=string(endpoint+1:end);
-
-		if strcmp(lower(tmp(1)),'m')
-			PLAYBACKSOURCE='m';
-		elseif strcmp(lower(tmp(1:2)),'au') 
-			PLAYBACKSOURCE='a';
-		elseif strcmp(lower(tmp(1:2)),'ad')
-			PLAYBACKSOURCE='c';
-		elseif strcmp(lower(tmp(1)),'d')
-			PLAYBACKSOURCE='d';
-		else
-			warning('Did not understand PLAYBACK source %s setting to digital in.',tmp);
-			PLAYBACKSOURCE='d';
-		end
-	else
-		warning('No PLAYBACK source given, set to adc');
-		PLAYBACKSOURCE='c';
-	end
-end
-
-if ~isempty(porttoken)
-
-	tmp=tokens{porttoken};
-
+	tmp=filesplit{PARSED.data_port.port};
 	[port,startpoint,endpoint]=regexpi(tmp,'port','match');
-
 	tmp=lower(tmp(endpoint+1:end));
 
 	for i=1:length(port_labels)
 		if ~isempty(strfind(tmp,port_labels(i)))
 			PORTS=[ PORTS port_labels(i) ];
 		end
-
 	end
 else
 
 	% if isempty assume all ports
 
 	PORTS=port_labels;
+	
 end	
 
-% parse the date
 
 if ~isempty(datetoken)
-	DATENUM=datenum([tokens{datetoken}],'yymmddHHMMSS');
+	DATENUM=datenum([filesplit{datetoken}],'yymmddHHMMSS');
+	fprintf('File date:\t%s\n',datestr(DATENUM));
 end
 
