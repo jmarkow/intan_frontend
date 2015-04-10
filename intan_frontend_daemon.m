@@ -37,7 +37,7 @@ last_file=clock; % when was the last file processed?
 interval=120;
 
 while 1==1
-	
+
 	% return the email flag in case we're monitoring so multiple emails are not sent
 
 	[email_flag,last_file]=intan_frontend_main(DIR,varargin{:},'email_flag',email_flag,'last_file',last_file);

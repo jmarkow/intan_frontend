@@ -1,4 +1,4 @@
-function [BIRDID,RECID,MICTRACE,MICSOURCE,MICPORT,PORTS,TTLTRACE,TTLSOURCE,PLAYBACKTRACE,PLAYBACKSOURCE,DATENUM]=frontend_fileparse(FILENAME,DELIM,FMT,DATEFMT)
+function [BIRDID,RECID,MICTRACE,MICSOURCE,MICPORT,PORTS,TTLTRACE,TTLSOURCE,PLAYBACKTRACE,PLAYBACKSOURCE,DATATRACE,DATASOURCE,DATENUM]=frontend_fileparse(FILENAME,DELIM,FMT,DATEFMT)
 %frontend_fileparse
 %
 %	frontend_fileparse(FILENAME,DELIM,FMT)
@@ -33,6 +33,8 @@ PLAYBACKTRACE=[];
 PLAYBACKSOURCE=[];
 DATENUM=[];
 PORTS='';
+DATATRACE=[];
+DATASOURCE=[];
 
 port_labels='abcd';
 
@@ -76,6 +78,12 @@ if strcmp(FMT,'auto') & length(tokens)>=2
 			fprintf(1,'Detected playback token at %i\n',playbacktoken);
 		end
 
+		datatoken=max(find(~cellfun(@isempty,strfind(tokens(3:end),'data'))))+2;
+		
+		if ~isempty(datatoken)
+			fprintf(1,'Detected data token at %i\n',datatoken);
+		end
+
 	end
 
 	datetoken=length(tokens);
@@ -92,6 +100,7 @@ else
 	datetoken=strfind(lower(FMT),'d');
 	porttoken=strfind(lower(FMT),'p');
 	playbacktoken=strfind(lower(FMT),'y');
+	datatoken=strfind(lower(FMT),'a');
 
 end
 
@@ -187,6 +196,41 @@ if ~isempty(ttltoken)
 	end
 end
 
+if ~isempty(datatoken)
+	
+	string=tokens{datatoken};
+	[datatokens,startpoint,endpoint]=regexpi(string,'\d+','match');
+
+	if isempty(datatokens)
+		error('Could not find data trace at token %g for file %s', datatoken,FILENAME);
+	end
+
+	DATATRACE=[];
+
+	for i=1:length(datatokens)
+		DATATRACE(i)=str2num(datatokens{i});
+	end
+
+	if length(string)>endpoint
+		tmp=string(endpoint+1:end);
+
+		if strcmp(lower(tmp(1)),'m')
+			DATASOURCE='m';
+		elseif strcmp(lower(tmp(1:2)),'au') 
+			DATASOURCE='a';
+		elseif strcmp(lower(tmp(1:2)),'ad')
+			DATASOURCE='c';
+		elseif strcmp(lower(tmp(1)),'d')
+			DATASOURCE='d';
+		else
+			warning('Did not understand DATA source %s setting to digital in.',tmp);
+			DATASOURCE='d';
+		end
+	else
+		warning('No DATA source given, set to digital in');
+		DATASOURCE='d';
+	end
+end
 
 if ~isempty(playbacktoken)
 	string=tokens{playbacktoken};
@@ -221,8 +265,14 @@ end
 
 if ~isempty(porttoken)
 
+	tmp=tokens{porttoken};
+
+	[port,startpoint,endpoint]=regexpi(tmp,'port','match');
+
+	tmp=lower(tmp(endpoint+1:end));
+
 	for i=1:length(port_labels)
-		if ~isempty(strfind(tokens{porttoken},port_labels(i)))
+		if ~isempty(strfind(tmp,port_labels(i)))
 			PORTS=[ PORTS port_labels(i) ];
 		end
 

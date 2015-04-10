@@ -235,14 +235,14 @@ for i=1:2:nparams
 			birdid=varargin{i+1};
 		case 'recid'
 			recid=varargin{i+1};
-        	case 'root_dir'
-            		root_dir=varargin{i+1};
+		case 'root_dir'
+			root_dir=varargin{i+1};
 	end
 end
 
-% TODO: use separate flags for file reading and waiting errors
-% 	give option to send e-mail if multiple errors come up
-% 	right now it's too sensitive
+
+% TODO: make data sorting more compact, map data sources and types automatically w/ fieldnames
+
 
 if ~isempty(parse_options)
 
@@ -370,7 +370,7 @@ for i=1:length(proc_files)
 			datastruct.original_filename=proc_files{i};
 
 			if datastruct.filestatus>0 
-				
+
 				if EMAIL_FLAG==0 & email_monitor>0
 					gmail_send(['File reading error, may need to restart the intan_frontend!']);
 					EMAIL_FLAG=1; % don't send another e-mail!
@@ -385,7 +385,7 @@ for i=1:length(proc_files)
 
 		catch err
 
-            		file_datenum=dir2.datenum;
+			file_datenum=dir2.datenum;
 			file_age=daysdif(file_datenum,datenum(now));
 
 			disp([err])
@@ -398,7 +398,6 @@ for i=1:length(proc_files)
 		disp('File still being written, continuing...');
 		continue;
 	end
-
 
 	% if we've defined a noise cutoff, use this to determine if the headstage is connected
 	
@@ -476,6 +475,8 @@ for i=1:length(proc_files)
 
 	disp(['Found ports:  ' found_ports]);
 
+	% form a data map
+
 	for j=1:nbirds
 
 		sleep_flag=0;
@@ -494,13 +495,12 @@ for i=1:length(proc_files)
 
 		% parse the file using the format string, insert parse options for manual option setting
       
-
 		bird_split{j}=[bird_split{j} parse_options datestring];
         
 		% auto_parse
 
 		[birdid,recid,mic_trace,mic_source,mic_port,ports,ttl_trace,ttl_source,...
-			playback_trace,playback_source,file_datenum]=...
+			playback_trace,playback_source,data_trace,data_source,file_datenum]=...
 			intan_frontend_fileparse(bird_split{j},delimiter,parse_string,date_string);
 
 		if ~isempty(user_birdid)
@@ -520,6 +520,8 @@ for i=1:length(proc_files)
 		disp(['Mic port:  ' mic_port]);
 		disp(['TTL ch:  ' num2str(ttl_trace)]);
 		disp(['TTL source:  ' ttl_source]);
+		disp(['Data ch:  ' num2str(data_trace)]);
+		disp(['Data source:  ' num2str(data_source)]);
 		disp(['Playback ch:  ' num2str(playback_trace)]);
 		disp(['Playback source:  ' playback_source]);
 		disp(['Data ports:  ' ports]);
@@ -608,6 +610,7 @@ for i=1:length(proc_files)
 		ismic=~isempty(mic_trace);
 		isttl=~isempty(ttl_trace);
 		isplayback=~isempty(playback_trace);
+		isdata=~isempty(data_trace);
 
 		disp(['Flags: mic ' num2str(ismic) ' ttl ' num2str(isttl) ' playback ' num2str(isplayback)]);
 
@@ -748,6 +751,7 @@ for i=1:length(proc_files)
 
 					birdstruct.ephys.data(:,mic_channel)=[];
 					birdstruct.ephys.labels(mic_channel)=[];
+					birdstruct.ephys.ports(mic_channel)=[];
 
 					if isfield(birdstruct.ephys,'names')
 						birdstruct.ephys.names(mic_channel)=[];
@@ -767,6 +771,7 @@ for i=1:length(proc_files)
 
 					birdstruct.aux.data(:,mic_channel)=[];
 					birdstruct.aux.labels(mic_channel)=[];
+					birdstruct.aux.ports(mic_channel)=[];
 
 					if isfield(birdstruct.aux,'names')
 						birdstruct.aux.names(mic_channel)=[];
@@ -819,6 +824,38 @@ for i=1:length(proc_files)
 
 		end
 
+
+		if isdata
+
+			switch lower(mic_source(1))	
+
+				case 'a'
+
+					data_channel=find(birdstruct.aux.labels==data_trace&birdstruct.aux.ports==data_port);
+
+					birdstruct.aux.data=birdstruct.aux.data(:,data_channel);
+					birdstruct.aux.labels=birdstruct.aux.labels(data_channel);
+					birdstruct.aux.ports=birdstruct.aux.ports(data_channel);
+
+					if isfield(birdstruct.aux,'names')
+						birdstruct.aux.names=birdstruct.aux.names(mic_channel);
+					end
+
+				case 'c'
+
+
+					data_channel=find(birdstruct.adc.labels==data_trace);
+
+					birdstruct.adc.data=birdstruct.adc.data(:,data_channel);
+					birdstruct.adc.labels=birdstruct.adc.labels(data_channel);
+
+					if isfield(birdstruct.adc,'names')
+						birdstruct.adc.names=birdstruct.adc.names(data_channel);
+					end
+
+			end
+
+		end
 
 		if ~isempty(file_datenum) & length(sleep_window)==2
 
@@ -936,7 +973,7 @@ for i=1:length(proc_files)
 
 		% did we detect song?
 
-		if ismic
+		if ismic & ~isempty(birdstruct.audio.norm_data)
 
 			disp('Entering song detection...');
 			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
