@@ -84,7 +84,7 @@ audio_pad=7; % pad on either side of the extraction (in seconds)
 % parameters for folder creation
 
 folder_format='yyyy-mm-dd';
-parse_string='auto'; % how to parse filenames, b=birdid, i=recid, m=micid, t=ttlid, d=date
+parse_string='auto'; % how to parse filenames, b=tokens.birdid, i=tokens.recid, m=micid, t=ttlid, d=date
 		       % character position indicates which token (after delim split) contains the info
 
 date_string='yymmddHHMMSS'; % parse date using datestr format
@@ -127,10 +127,11 @@ playback_skip=0;
 % define for manual parsing
 
 ports='';
-birdid='';
-recid='';
+tokens.birdid='';
+tokens.recid='';
 parse_options='';
 last_file=clock;
+skip_fields={'t','fs'};
 
 % TODO: option for custom e-mail function (just map to anonymous function)
 
@@ -217,8 +218,6 @@ for i=1:2:nparams
 			ttl_skip=varargin{i+1};
 		case 'ttl_extract'
 			ttl_extract=varargin{i+1};
-		case 'parse_string'
-			parse_string=varargin{i+1};
 		case 'email_monitor'
 			email_monitor=varargin{i+1};
 		case 'email_flag'
@@ -231,10 +230,10 @@ for i=1:2:nparams
 			playback_rmswin=varargin{i+1};
 		case 'playback_skip'
 			playback_skip=varargin{i+1};
-		case 'birdid'
-			birdid=varargin{i+1};
-		case 'recid'
-			recid=varargin{i+1};
+		case 'tokens.birdid'
+			tokens.birdid=varargin{i+1};
+		case 'tokens.recid'
+			tokens.recid=varargin{i+1};
 		case 'root_dir'
 			root_dir=varargin{i+1};
 	end
@@ -326,8 +325,8 @@ if email_monitor>0 & EMAIL_FLAG==0
 	end
 end
 
-user_birdid=birdid;
-user_recid=recid;
+user_birdid=tokens.birdid;
+user_recid=tokens.recid;
 
 for i=1:length(proc_files)
 
@@ -345,99 +344,42 @@ for i=1:length(proc_files)
 	% try reading the file, if we fail, skip
 
 	%%% check if file is still being written to, check byte change within N msec
-
-
 	% when was the last file created
 
 	dir1=dir(proc_files{i});
 	pause(file_check);
 	dir2=dir(proc_files{i});
 
-    try
-        bytedif=dir1.bytes-dir2.bytes;
-    catch
-        pause(10);
-        bytedif=dir1.bytes-dir2.bytes;
-    end
+	try
+		bytedif=dir1.bytes-dir2.bytes;
+	catch
+		pause(10);
+		bytedif=dir1.bytes-dir2.bytes;
+	end
+
 	% if we haven't written any new data in the past (file_check) seconds, assume
 	% file has been written
 
 	if bytedif==0
-
-		try
-
-			datastruct=intan_frontend_readdata(proc_files{i});
-			datastruct.original_filename=proc_files{i};
-
-			if datastruct.filestatus>0 
-
-				if EMAIL_FLAG==0 & email_monitor>0
-					gmail_send(['File reading error, may need to restart the intan_frontend!']);
-					EMAIL_FLAG=1; % don't send another e-mail!
-				end
-
-				movefile(proc_files{i},proc_dir);
-				disp('Could not read file, skipping...');
-				fclose('all'); % read_intan does not properly close file if it bails
-				continue;
-
-			end
-
-		catch err
-
-			file_datenum=dir2.datenum;
-			file_age=daysdif(file_datenum,datenum(now));
-
-			disp([err])
-			disp('Could not read file, skipping...');
-			fclose('all'); % read_intan does not properly close file if it bails
-			movefile(proc_files{i},proc_dir);
-			continue;
-		end
+		[datastruct,EMAIL_FLAG]=intan_frontend_readfile(proc_files{i},EMAIL_FLAG,email_monitor);
 	else
 		disp('File still being written, continuing...');
 		continue;
 	end
 
+	if datastruct.filestatus>0 
+		disp('Could not read file, skipping...');
+		pause();
+		movefile(proc_files{i},proc_dir);
+		continue;
+	end
+
 	% if we've defined a noise cutoff, use this to determine if the headstage is connected
-	
+
 	nchannels=size(datastruct.ephys.data,2);
 
-	if email_noisecut>0 & nchannels>0
-
-		disp('Checking noise level');
-
-		[bnoise,anoise]=iirpeak(60/(datastruct.ephys.fs/2),5/(datastruct.ephys.fs/2));
-		noiseflag=zeros(1,nchannels);
-
-		for j=1:nchannels
-
-			linenoise=filtfilt(bnoise,anoise,datastruct.ephys.data(:,j));
-			noiselevel=abs(hilbert(linenoise));
-
-			noisethresh=noiselevel>=email_noisecut;
-			noiselen=sum(noisethresh)/datastruct.ephys.fs;
-			noiseflag(j)=noiselen>email_noiselen;
-
-		end
-
-		disp('Noise level flags:  ');
-
-		for j=1:nchannels
-			fprintf(1,'%i',noiseflag(j));
-		end
-
-		fprintf(1,'\n');
-
-		% if all channels have high noise levels, alert the user
-
-		% TODO:  setting for checking across multiple files (could use simple counter)
-
-		if all(noiseflag) & EMAIL_FLAG==0 & email_monitor>0
-			gmail_send(['Found excessive noise levels on all channels, make sure headstage is connected!']);
-			EMAIL_FLAG=1; % don't send another e-mail!
-		end
-
+	if email_noisecut>0 & nchannels>0 & isfield(datastruct,'ephys')
+		EMAIL_FLAG=intan_frontend_checknoise(datastruct.ephys.data,datastruct.ephys.fs,email_noisecut,email_noiselen,EMAIL_FLAG,email_monitor);
 	end
 
 	% if we're successful reading, then move the file to a processed directory
@@ -449,19 +391,18 @@ for i=1:length(proc_files)
 
 	bird_split=regexp(name,bird_delimiter,'split');
 	tokens=regexp(bird_split{end},delimiter,'split');
-    	
+
 	nbirds=length(bird_split);
 	last_bird=tokens{1};
 
 	for j=2:length(tokens)-2
 		last_bird=[ last_bird delimiter tokens{j} ];
 	end
-	
+
 	bird_split{nbirds}=last_bird;
 
 	% get the date tokens from the last bird, append to all others
 
-	%datetokens=find(parse_string=='d');
 	datetokens=[length(tokens)-1 length(tokens)];
 	datestring='';
 
@@ -469,10 +410,7 @@ for i=1:length(proc_files)
 		datestring=[ datestring delimiter(end) tokens{datetokens(j)} ];
 	end
 
-	% clear out all extraction variables to be safe
-
 	found_ports=unique(datastruct.ephys.ports); % which ports are currently being used?
-
 	disp(['Found ports:  ' found_ports]);
 
 	% form a data map
@@ -480,27 +418,15 @@ for i=1:length(proc_files)
 	for j=1:nbirds
 
 		sleep_flag=0;
-		song_bin=[];
-
-		norm_data=[];
-		conditioned_data=[];
-		ttl_data=[];
-
-		norm_extraction=[];
-		audio_extraction=[];
-		ephys_extraction=[];
-		ttl_extraction=[];
-		sonogram_im=[];
-		chunk_sonogram_im=[];
 
 		% parse the file using the format string, insert parse options for manual option setting
-      
+
 		bird_split{j}=[bird_split{j} parse_options datestring];
-        
+
 		% auto_parse
 
 		[tokens,ports,file_datenum]=...
-			intan_frontend_fileparse(bird_split{j},delimiter,parse_string,date_string);
+			intan_frontend_fileparse(bird_split{j},delimiter,date_string);
 
 		if ~isempty(user_birdid)
 			tokens.birdid=user_birdid;
@@ -512,23 +438,23 @@ for i=1:length(proc_files)
 
 		disp(['Processing bird ' num2str(j) ' of ' num2str(nbirds) ]);
 		disp(['File status:  ' num2str(datastruct.filestatus)]);
-		
+
 		% now create the folder it doesn't exist already
 
-		foldername=fullfile(root_dir,birdid,recid,datestr(file_datenum,folder_format));	
+		foldername=fullfile(root_dir,tokens.birdid,tokens.recid,datestr(file_datenum,folder_format));	
 
 		% create the bird directory
 
-		if ~exist(fullfile(root_dir,birdid),'dir')
-			mkdir(fullfile(root_dir,birdid));
+		if ~exist(fullfile(root_dir,tokens.birdid),'dir')
+			mkdir(fullfile(root_dir,tokens.birdid));
 		end
 
 		% create the template directory and a little readme
 
-		if ~exist(fullfile(root_dir,birdid,'templates'),'dir')
-			mkdir(fullfile(root_dir,birdid,'templates'));
+		if ~exist(fullfile(root_dir,tokens.birdid,'templates'),'dir')
+			mkdir(fullfile(root_dir,tokens.birdid,'templates'));
 			copyfile(fullfile(script_path,'template_readme.txt'),...
-				fullfile(root_dir,birdid,'templates','README.txt'));
+				fullfile(root_dir,tokens.birdid,'templates','README.txt'));
 		end
 
 		if ~isempty(ports)
@@ -549,43 +475,35 @@ for i=1:length(proc_files)
 
 		disp(['Will extract from ports: ' include_ports]);
 
-		include_ephys=[];
-		include_aux=[];
-		include_id='';
-
-		for k=1:length(include_ports)
-
-			len=length(find(datastruct.ephys.ports==include_ports(k)));
-
-			include_ephys=[include_ephys find(datastruct.ephys.ports==include_ports(k))];
-			include_aux=[include_aux find(datastruct.aux.ports==include_ports(k))];
-			include_id=[include_id repmat(include_ports(k),[1 len])];
-
-		end
-
-		fprintf(1,'Raw channel mapping for port: ');
-
-		for k=1:length(include_ephys)
-			fprintf(1,'%i(%s) ',include_ephys(k),include_id(k));	
-		end
-
-		fprintf(1,'\n');
-
-		% map to a new structure with the appropriate ports
+		% loop through variables, anything with a port only take the include port
 
 		datastruct.file_datenum=file_datenum;
-
 		birdstruct=datastruct;
 
-		birdstruct.ephys.labels=birdstruct.ephys.labels(include_ephys);
-		birdstruct.ephys.ports=birdstruct.ephys.ports(include_ephys);
-		birdstruct.ephys.data=birdstruct.ephys.data(:,include_ephys);
+		data_types=fieldnames(birdstruct);
 
-		birdstruct.aux.labels=birdstruct.aux.labels(include_aux);
-		birdstruct.aux.ports=birdstruct.aux.ports(include_aux);
-		birdstruct.aux.data=birdstruct.aux.data(:,include_aux);
+		for k=1:length(data_types)
 
-		% if file contains sampling rate, overwrite and use file's fs
+			if isfield(birdstruct.(data_types{i}),'ports')
+
+				idx=[];
+				for l=1:length(include_ports)
+					idx=[ idx find(birdstruct.(data_types{i}).ports==include_ports(l)) ];
+				end	
+
+				if isfield(birdstruct.(data_types{i}),'labels')
+					birdstruct.(data_types{i}).labels=birdstruct.(data_types{i}).labels(idx);
+				end
+
+				if isfield(birdstruct.(data_types{i}),'data')
+					birdstruct.(data_types{i}).data=birdstruct.(data_types{i}).data(:,idx);
+				end
+
+				birdstruct.(data_types{i}).ports=birdstruct.(data_types{i}).ports(idx);
+
+			end
+
+		end
 
 		if ~exist(foldername,'dir')
 			mkdir(foldername);
@@ -593,254 +511,78 @@ for i=1:length(proc_files)
 
 		% standard song detection
 
-		ismic=~isfield(mic_trace);
-		isttl=~isempty(ttl_trace);
-		isplayback=~isempty(playback_trace);
-		isdata=~isempty(data_trace);
+		isaudio=isfield(tokens,'audio');
+		isttl=isfield(tokens,'ttl');
+		isplayback=isfield(tokens,'playback');
+		isdata=isfield(tokens,'data');
 
-		disp(['Flags: mic ' num2str(ismic) ' ttl ' num2str(isttl) ' playback ' num2str(isplayback)]);
+		disp(['Flags: audio ' num2str(isaudio) ' ttl ' num2str(isttl) ' playback ' num2str(isplayback)]);
 
-		% if we use a ttl trigger, assume the source is digital
+		map_types=fieldnames(tokens);
+		map_types(strcmp(map_types,'birdid'))=[];
+		map_types(strcmp(map_types,'recid'))=[];
 
-		if isplayback
-			switch(lower(playback_source(1)))
+		% map the data
 
-				case 'c'
+		for k=1:length(map_types)
 
-					playback_channel=find(playback_trace==birdstruct.adc.labels);
+			% data is not meant for mapping
 
-					birdstruct.playback.data=birdstruct.adc.data(:,playback_channel);
-					birdstruct.playback.fs=birdstruct.adc.fs;
-					birdstruct.playback.t=birdstruct.adc.t;
+			curr_map=tokens.(map_types{k});
+			src=curr_map.source;
+			check_fields=fieldnames(birdstruct.(src));
 
-					birdstruct.adc.data(:,playback_channel)=[];
-					birdstruct.adc.labels(playback_channel)=[];
-
-					if isfield(birdstruct.adc,'names')
-						birdstruct.adc.names(playback_channel)=[];
-					end
-
-					if isempty(birdstruct.adc.data)
-						birdstruct.adc.t=[];
-					end
-
-
-				case 'd'
-
-					playback_channel=find(playback_trace==birdstruct.digin.labels);
-
-					birdstruct.playback.data=birdstruct.digin.data(:,playback_channel);
-					birdstruct.playback.fs=birdstruct.digin.fs;
-					birdstruct.playback.t=birdstruct.digin.t;
-
-					birdstruct.digin.data(:,playback_channel)=[];
-					birdstruct.digin.labels(playback_channel)=[];
-
-					if isfield(birdstruct.digin,'names')
-						birdstruct.digin.names(playback_channel)=[];
-					end
-
-					if isempty(birdstruct.digin.data)
-						birdstruct.digin.t=[];
-					end
-	
+			for l=1:length(skip_fields)
+				check_fields(strcmp(lower(check_fields),skip_fields{l}))=[];
 			end
 
-			if ~isempty(filtering)
-				[b,a]=butter(5,[filtering/(birdstruct.playback.fs/2)],'high'); % don't need a sharp cutoff, butterworth should be fine
-			else
-				b=[];
-				a=[];
+			to_del=1;
+
+			if strcmp(map_types{k},'data')
+				map_types{k}=src;
+				to_del=0;
 			end
 
+			% map the data if the source exists
 
-			if ~isempty(filtering)
-				birdstruct.playback.norm_data=filtfilt(b,a,birdstruct.playback.data);
-			else
-				birdstruct.playback.norm_data=detrend(birdstruct.playback.data);
-			end
+			if isfield(birdstruct,curr_map.source) 
 
-			% don't amplitude normalize playback data, volume is used for detection!!!!
+				birdstruct.(map_types{k})=birdstruct.(src);
 
-			%birdstruct.playback.norm_data=birdstruct.playback.norm_data./max(abs(birdstruct.playback.norm_data));
+				idx=[];
+				for l=1:length(birdstruct.(src).labels)
+					idx(l)=any(birdstruct.(src).labels(l)==curr_map.channels);
+				end
 
-
-		else
-			birdstruct.playback.data=[];
-		end
-
-		if isttl
-
-			switch lower(ttl_source(1))
-
-				case 'c'
-
-					ttl_channel=find(ttl_trace==birdstruct.adc.labels);
-
-					birdstruct.ttl.data=birdstruct.adc.data(:,ttl_channel);
-					birdstruct.ttl.fs=birdstruct.adc.fs;
-					birdstruct.ttl.t=birdstruct.adc.t;
-
-					birdstruct.adc.data(:,ttl_channel)=[];
-					birdstruct.adc.labels(ttl_channel)=[];
-
-					if isfield(birdstruct.adc,'names')
-						birdstruct.adc.names(ttl_channel)=[];
+				if isfield(curr_map,'ports') & isfield(birdstruct.(src),'ports')
+					idx2=[];
+					for l=1:length(birdstruct.(src).ports)
+						idx2(l)=any(birdstruct.(src).ports(l)==curr_map.ports);
 					end
+					idx=(idx&idx2);
+				end
 
-					if isempty(birdstruct.adc.data)
-						birdstruct.adc.t=[];
+				idx=find(idx);
+
+				for l=1:length(check_fields)
+					if isfield(birdstruct.(src),check_fields{l})
+						ndim=ndims(birdstruct.(src).(check_fields{l}));
+						if ndim==2
+							birdstruct.(map_types{k}).(check_fields{l})=birdstruct.(src).(check_fields{l})(:,idx);
+							if to_del
+								birdstruct.(src).(check_fields{l})(:,idx)=[];
+							end
+						elseif ndim==1
+							birdstruct.(map_types{k}).(check_fields{l})=birdstruct.(src).(check_fields{l});
+						end
 					end
+				end
 
-
-				case 'd'
-
-					ttl_channel=find(ttl_trace==birdstruct.digin.labels);
-
-					birdstruct.ttl.data=birdstruct.digin.data(:,ttl_channel);
-					birdstruct.ttl.fs=birdstruct.digin.fs;
-					birdstruct.ttl.t=birdstruct.digin.t;
-
-					birdstruct.digin.data(:,ttl_channel)=[];
-					birdstruct.digin.labels(ttl_channel)=[];
-
-					if isfield(birdstruct.digin,'names')
-						birdstruct.digin.names(ttl_channel)=[];
-					end
-
-					if isempty(birdstruct.digin.data)
-						birdstruct.digin.t=[];
-					end
-
+				if isempty(birdstruct.(src).data) & isfield(birdstruct.(src),'t')
+					birdstruct.(src).t=[];
+				end
 
 			end
-
-		else
-			birdstruct.ttl.data=[];
-		end
-
-		if ismic		
-
-			% (m)ain channels (i.e. electrode channel), (a)ux or a(d)c?
-
-			switch lower(mic_source(1))
-
-				case 'm'
-
-					mic_channel=find(birdstruct.ephys.labels==mic_trace&birdstruct.ephys.ports==mic_port);
-
-					% take out the mic channel from the ephys labels
-
-					birdstruct.audio.data=birdstruct.ephys.data(:,mic_channel);
-					birdstruct.audio.fs=birdstruct.ephys.fs;
-					birdstruct.audio.t=birdstruct.ephys.t;
-
-					birdstruct.ephys.data(:,mic_channel)=[];
-					birdstruct.ephys.labels(mic_channel)=[];
-					birdstruct.ephys.ports(mic_channel)=[];
-
-					if isfield(birdstruct.ephys,'names')
-						birdstruct.ephys.names(mic_channel)=[];
-					end
-
-					if isempty(birdstruct.ephys.data)
-						birdstruct.ephys.t=[];
-					end
-
-				case 'a'
-
-					mic_channel=find(birdstruct.aux.labels==mic_trace&birdstruct.aux.ports==mic_port);
-
-					birdstruct.audio.data=birdstruct.aux.data(:,mic_channel);
-					birdstruct.audio.fs=birdstruct.aux.fs;
-					birdstruct.audio.t=birdstruct.aux.t;
-
-					birdstruct.aux.data(:,mic_channel)=[];
-					birdstruct.aux.labels(mic_channel)=[];
-					birdstruct.aux.ports(mic_channel)=[];
-
-					if isfield(birdstruct.aux,'names')
-						birdstruct.aux.names(mic_channel)=[];
-					end
-
-					if isempty(birdstruct.aux.data)
-						birdstruct.aux.t=[];
-					end
-
-				case 'c'
-
-					mic_channel=find(birdstruct.adc.labels==mic_trace);
-
-					birdstruct.audio.data=birdstruct.adc.data(:,mic_channel);
-					birdstruct.audio.fs=birdstruct.adc.fs;
-					birdstruct.audio.t=birdstruct.adc.t;
-
-					birdstruct.adc.data(:,mic_channel)=[];
-					birdstruct.adc.labels(mic_channel)=[];
-
-					if isfield(birdstruct.adc,'names')
-						birdstruct.adc.names(mic_channel)=[];
-					end
-
-					if isempty(birdstruct.adc.data)
-						birdstruct.adc.t=[];
-					end
-
-			end
-
-			% set up high-pass for mic data if indicated by the user
-
-			if ~isempty(filtering)
-				[b,a]=butter(5,[filtering/(birdstruct.audio.fs/2)],'high'); % don't need a sharp cutoff, butterworth should be fine
-			else
-				b=[];
-				a=[];
-			end
-
-			if ~isempty(filtering)
-				birdstruct.audio.norm_data=filtfilt(b,a,birdstruct.audio.data);
-			else
-				birdstruct.audio.norm_data=detrend(birdstruct.audio.data);
-			end
-
-			birdstruct.audio.norm_data=birdstruct.audio.norm_data./max(abs(birdstruct.audio.norm_data));
-		else
-			birdstruct.audio.data=[];
-			birdstruct.audio.norm_data=[];
-
-		end
-
-
-		if isdata
-
-			switch lower(mic_source(1))	
-
-				case 'a'
-
-					data_channel=find(birdstruct.aux.labels==data_trace&birdstruct.aux.ports==data_port);
-
-					birdstruct.aux.data=birdstruct.aux.data(:,data_channel);
-					birdstruct.aux.labels=birdstruct.aux.labels(data_channel);
-					birdstruct.aux.ports=birdstruct.aux.ports(data_channel);
-
-					if isfield(birdstruct.aux,'names')
-						birdstruct.aux.names=birdstruct.aux.names(mic_channel);
-					end
-
-				case 'c'
-
-
-					data_channel=find(birdstruct.adc.labels==data_trace);
-
-					birdstruct.adc.data=birdstruct.adc.data(:,data_channel);
-					birdstruct.adc.labels=birdstruct.adc.labels(data_channel);
-
-					if isfield(birdstruct.adc,'names')
-						birdstruct.adc.names=birdstruct.adc.names(data_channel);
-					end
-
-			end
-
 		end
 
 		if ~isempty(file_datenum) & length(sleep_window)==2
@@ -856,7 +598,7 @@ for i=1:length(proc_files)
 				disp(['Processing sleep data for file ' proc_files{i}]);
 
 				intan_frontend_sleepdata(birdstruct,bird_split{j},sleep_window,sleep_segment,sleep_fileinterval,sleep_pre,...
-					fullfile(root_dir,birdid,recid),folder_format,delimiter,parse_string);	
+					fullfile(root_dir,tokens.birdid,tokens.recid),folder_format,delimiter);	
 
 				sleep_flag=1;
 
@@ -881,13 +623,10 @@ for i=1:length(proc_files)
 		wav_dir_pback=fullfile(foldername,[wav_pre '_pback']);
 		data_dir_pback=fullfile(foldername,[data_pre '_pback']);
 
-		if ~ismic & ~isttl & ~sleep_flag & ~isplayback
-
+		if ~isaudio & ~isttl & ~sleep_flag & ~isplayback
 			save(fullfile(data_dir,['songdet1_' bird_split{j} '.mat']),'-struct','birdstruct','-v7.3');
 			clearvars birdstruct;
-
 			continue;
-
 		end
 
 		% if we have a TTL trace, extract using the TTL
@@ -900,72 +639,76 @@ for i=1:length(proc_files)
 		% second check playback, sometimes we want to bail after TTL/playback (min. amplitude threshold)
 		% finally check for song
 
+		ext_pts=[];
 
 		if isttl & ttl_extract
 
-			detection=birdstruct.ttl.data(:)>.5;
-			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.ttl.fs))/birdstruct.ttl.fs;
+			ext_pts=intan_frontend_ttlextract(birdstruct,audio_pad,bird_split{j},dirstructttl,...
+				disp_band,colors,proc_files{i},proc_dir);
 
-			if ~isempty(ext_pts)
+			if ~isempty(ext_pts) & ttl_skip
 
-				disp('Found ttl..');
+				disp('Skipping song detection...');
 
-				intan_frontend_dataextract(bird_split{j},birdstruct,dirstructttl,...
-					ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','_ttl');
-
-				% if we found TTL pulses and ttl_skip is on, skip song detection and move on to next file
-
-				if ttl_skip
-					disp('Skipping song detection...');
+				try
+					movefile(proc_files{i},proc_dir);
+				catch
+					disp(['Could not move file ' proc_files{i}]);
+					fclose('all');
 					continue;
-				end	
+				end
 
-			end
+				continue;
+			end	
+
 		end
 
 		% did we detect playback?
 
 		if isplayback & playback_extract
-		
+
 			% insert song detection code, change audio to playback?, or pass flag for show 
 			% playback data
-		
+
 			disp('Entering playback detection...');
+			ext_pts=intan_frontend_ttlextract(birdstruct,filtering,rms_win,playback_thresh,audio_pad,...
+				bird_split{j},dirstructplayback,disp_band,colors,proc_files{i},proc_dir);
 
-			% simply take rms of playback signal
-			
-			rmswin_smps=round(playback_rmswin*birdstruct.playback.fs);
-			rms=sqrt(smooth(birdstruct.playback.norm_data.^2,rmswin_smps));
-
-			detection=rms>playback_thresh;
-			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.playback.fs))/birdstruct.playback.fs;
-
-			if ~isempty(ext_pts)
-
-				disp('Found playback...');
-
-				intan_frontend_dataextract(bird_split{j},birdstruct,dirstructpback,...
-					ext_pts,disp_band(1),disp_band(2),colors,'playback',1,'songdet1_','_pback');
-				%intan_frontend_dataextract(bird_split{j},birdstruct,dirstructpback,...
-				%	ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','');
-
-				if playback_skip
-					disp('Skipping song detection...');
+			if ~isempty(ext_pts) & playback_skip
+				try
+					movefile(proc_files{i},proc_dir);
+				catch
+					disp(['Could not move file ' proc_files{i}]);
+					fclose('all');
 					continue;
 				end
+
+				disp('Skipping song detection...');
+				continue;
+
 			end
 
 		end
 
 		% did we detect song?
 
-		if ismic & ~isempty(birdstruct.audio.norm_data)
+		if isaudio
 
 			disp('Entering song detection...');
+
+			if ~isempty(filtering)
+				[b,a]=butter(5,[filtering/(birdstruct.audio.fs/2)],'high'); 
+				birdstruct.audio.norm_data=filtfilt(b,a,birdstruct.audio.data);
+			else
+				birdstruct.audio.norm_data=detrend(birdstruct.audio.data);
+			end
+
+			birdstruct.audio.norm_data=birdstruct.audio.norm_data./max(abs(birdstruct.audio.norm_data));
+
 			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
 				'len',song_len,'overlap',song_overlap,'song_duration',song_duration,...
 				'ratio_thresh',song_ratio,'song_thresh',song_thresh,'pow_thresh',song_pow);
-			
+
 			raw_t=[1:length(birdstruct.audio.norm_data)]./birdstruct.audio.fs;
 
 			% interpolate song detection to original space, collate idxs
@@ -984,6 +727,7 @@ for i=1:length(proc_files)
 		% clear the datastructure for this bird
 
 		clear birdstruct;
+
 
 	end
 

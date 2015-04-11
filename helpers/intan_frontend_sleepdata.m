@@ -1,13 +1,9 @@
-function frontend_sleepdata(DATA,FILENAME,SLEEP_WINDOW,SLEEP_SEGMENT,SLEEP_FILEINTERVAL,SLEEP_FOLDER,BASE_DIR,FOLDER_FORMAT,DELIM,PARSE_STRING)
+function frontend_sleepdata(DATA,FILENAME,SLEEP_WINDOW,SLEEP_SEGMENT,SLEEP_FILEINTERVAL,SLEEP_FOLDER,BASE_DIR,FOLDER_FORMAT,DELIM)
 %frontend_sleepdata determines if data should be added to sleep collection
 %
 %
 %
 %
-
-newstring=repmat('?',[1 length(PARSE_STRING)+1]);
-datesym=strfind(PARSE_STRING,'d')+1;
-newstring(datesym)='d';
 
 fs=DATA.audio.fs;
 ephys_labels=DATA.ephys.labels;

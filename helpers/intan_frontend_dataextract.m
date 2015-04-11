@@ -55,6 +55,16 @@ sonogram_im=flipdim(sonogram_im,1);
 im_son_to_vec=(length(DATA.(SOURCE).norm_data)-(3.3/1e3)*fs)/t;
 
 data_types={'ephys','ttl','digout','digin','adc','aux','audio','playback'};
+found_types=fieldnames(DATA);
+
+to_del=[];
+for i=1:length(data_types)
+	if ~any(strcmp(found_types,data_types{i}))
+		to_del=[to_del i];
+	end
+end
+
+data_types(to_del)=[];
 
 savefun=@(filename,datastruct) save(filename,'-struct','datastruct','-v7.3');
 sonogram_filename=fullfile(DIRS.image,[ PREFIX FILENAME SUFFIX '.gif' ]);
