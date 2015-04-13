@@ -131,7 +131,6 @@ tokens.birdid='';
 tokens.recid='';
 parse_options='';
 last_file=clock;
-skip_fields={'t','fs'};
 
 % TODO: option for custom e-mail function (just map to anonymous function)
 
@@ -518,72 +517,7 @@ for i=1:length(proc_files)
 
 		disp(['Flags: audio ' num2str(isaudio) ' ttl ' num2str(isttl) ' playback ' num2str(isplayback)]);
 
-		map_types=fieldnames(tokens);
-		map_types(strcmp(map_types,'birdid'))=[];
-		map_types(strcmp(map_types,'recid'))=[];
-
-		% map the data
-
-		for k=1:length(map_types)
-
-			curr_map=tokens.(map_types{k});
-			src=curr_map.source;
-			check_fields=fieldnames(birdstruct.(src));
-
-			for l=1:length(skip_fields)
-				check_fields(strcmp(lower(check_fields),skip_fields{l}))=[];
-			end
-
-			to_del=1;
-
-			% special data type maps src to itself, only keeping user specified channels
-
-			if strcmp(map_types{k},'data')
-				map_types{k}=src;
-				to_del=0;
-			end
-
-			% map the data if the source exists
-
-			if isfield(birdstruct,curr_map.source) 
-
-				birdstruct.(map_types{k})=birdstruct.(src);
-
-				idx=[];
-				for l=1:length(birdstruct.(src).labels)
-					idx(l)=any(birdstruct.(src).labels(l)==curr_map.channels);
-				end
-
-				if isfield(curr_map,'ports') & isfield(birdstruct.(src),'ports')
-					idx2=[];
-					for l=1:length(birdstruct.(src).ports)
-						idx2(l)=any(birdstruct.(src).ports(l)==curr_map.ports);
-					end
-					idx=(idx&idx2);
-				end
-
-				idx=find(idx);
-
-				for l=1:length(check_fields)
-					if isfield(birdstruct.(src),check_fields{l})
-						ndim=ndims(birdstruct.(src).(check_fields{l}));
-						if ndim==2
-							birdstruct.(map_types{k}).(check_fields{l})=birdstruct.(src).(check_fields{l})(:,idx);
-							if to_del
-								birdstruct.(src).(check_fields{l})(:,idx)=[];
-							end
-						elseif ndim==1
-							birdstruct.(map_types{k}).(check_fields{l})=birdstruct.(src).(check_fields{l});
-						end
-					end
-				end
-
-				if isempty(birdstruct.(src).data) & isfield(birdstruct.(src),'t')
-					birdstruct.(src).t=[];
-				end
-
-			end
-		end
+		birdstruct=intan_frontend_sortstruct(tokens,birdstruct);
 
 		if ~isempty(file_datenum) & length(sleep_window)==2
 
@@ -704,7 +638,7 @@ for i=1:length(proc_files)
 			end
 
 			birdstruct.audio.norm_data=birdstruct.audio.norm_data./max(abs(birdstruct.audio.norm_data));
-
+			
 			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
 				'len',song_len,'overlap',song_overlap,'song_duration',song_duration,...
 				'ratio_thresh',song_ratio,'song_thresh',song_thresh,'pow_thresh',song_pow);
