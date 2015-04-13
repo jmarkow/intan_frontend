@@ -230,10 +230,10 @@ for i=1:2:nparams
 			playback_rmswin=varargin{i+1};
 		case 'playback_skip'
 			playback_skip=varargin{i+1};
-		case 'tokens.birdid'
-			tokens.birdid=varargin{i+1};
-		case 'tokens.recid'
-			tokens.recid=varargin{i+1};
+		case 'birdid'
+			birdid=varargin{i+1};
+		case 'recid'
+			recid=varargin{i+1};
 		case 'root_dir'
 			root_dir=varargin{i+1};
 	end
@@ -484,22 +484,22 @@ for i=1:length(proc_files)
 
 		for k=1:length(data_types)
 
-			if isfield(birdstruct.(data_types{i}),'ports')
+			if isfield(birdstruct.(data_types{k}),'ports')
 
 				idx=[];
 				for l=1:length(include_ports)
-					idx=[ idx find(birdstruct.(data_types{i}).ports==include_ports(l)) ];
+					idx=[ idx find(birdstruct.(data_types{k}).ports==include_ports(l)) ];
 				end	
 
-				if isfield(birdstruct.(data_types{i}),'labels')
-					birdstruct.(data_types{i}).labels=birdstruct.(data_types{i}).labels(idx);
+				if isfield(birdstruct.(data_types{k}),'labels')
+					birdstruct.(data_types{k}).labels=birdstruct.(data_types{k}).labels(idx);
 				end
 
-				if isfield(birdstruct.(data_types{i}),'data')
-					birdstruct.(data_types{i}).data=birdstruct.(data_types{i}).data(:,idx);
+				if isfield(birdstruct.(data_types{k}),'data')
+					birdstruct.(data_types{k}).data=birdstruct.(data_types{k}).data(:,idx);
 				end
 
-				birdstruct.(data_types{i}).ports=birdstruct.(data_types{i}).ports(idx);
+				birdstruct.(data_types{k}).ports=birdstruct.(data_types{k}).ports(idx);
 
 			end
 
