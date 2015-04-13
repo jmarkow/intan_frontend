@@ -526,8 +526,6 @@ for i=1:length(proc_files)
 
 		for k=1:length(map_types)
 
-			% data is not meant for mapping
-
 			curr_map=tokens.(map_types{k});
 			src=curr_map.source;
 			check_fields=fieldnames(birdstruct.(src));
@@ -537,6 +535,8 @@ for i=1:length(proc_files)
 			end
 
 			to_del=1;
+
+			% special data type maps src to itself, only keeping user specified channels
 
 			if strcmp(map_types{k},'data')
 				map_types{k}=src;
