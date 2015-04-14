@@ -126,15 +126,14 @@ playback_skip=0;
 
 % define for manual parsing
 
-ports='';
-tokens.birdid='';
-tokens.recid='';
+birdid='';
+recid='';
 parse_options='';
 last_file=clock;
 
 % TODO: option for custom e-mail function (just map to anonymous function)
 
-file_check=5; % how long to wait between file reads to check if file is no longer being written (in seconds)
+file_check=1; % how long to wait between file reads to check if file is no longer being written (in seconds)
 
 mfile_path = mfilename('fullpath');
 [script_path,~,~]=fileparts(mfile_path);
@@ -177,8 +176,6 @@ end
 
 for i=1:2:nparams
 	switch lower(varargin{i})
-		case 'ports'
-			ports=varargin{i+1};
 		case 'parse_options'
 			parse_options=varargin{i+1};
 		case 'last_file'
@@ -324,11 +321,10 @@ if email_monitor>0 & EMAIL_FLAG==0
 	end
 end
 
-user_birdid=tokens.birdid;
-user_recid=tokens.recid;
+user_birdid=birdid;
+user_recid=recid;
 
 for i=1:length(proc_files)
-
 
 	fclose('all'); % seems to be necessary
 
@@ -368,8 +364,7 @@ for i=1:length(proc_files)
 
 	if datastruct.filestatus>0 
 		disp('Could not read file, skipping...');
-		pause();
-		movefile(proc_files{i},proc_dir);
+		intan_frontend_finish(proc_files{i},proc_dir);
 		continue;
 	end
 
@@ -424,7 +419,7 @@ for i=1:length(proc_files)
 
 		% auto_parse
 
-		[tokens,ports,file_datenum]=...
+		[tokens,file_datenum]=...
 			intan_frontend_fileparse(bird_split{j},delimiter,date_string);
 
 		if ~isempty(user_birdid)
@@ -455,54 +450,11 @@ for i=1:length(proc_files)
 			copyfile(fullfile(script_path,'template_readme.txt'),...
 				fullfile(root_dir,tokens.birdid,'templates','README.txt'));
 		end
-
-		if ~isempty(ports)
-
-			include_ports=[];
-
-			for k=1:length(ports)
-
-				if any(ismember(lower(found_ports(:)),lower(ports(k))))
-					include_ports=[include_ports ports(k)];
-				end
-			end
-		else
-			include_ports=found_ports;
-		end
-
-		include_ports=upper(include_ports);
-
-		disp(['Will extract from ports: ' include_ports]);
-
+	
 		% loop through variables, anything with a port only take the include port
 
 		datastruct.file_datenum=file_datenum;
 		birdstruct=datastruct;
-
-		data_types=fieldnames(birdstruct);
-
-		for k=1:length(data_types)
-
-			if isfield(birdstruct.(data_types{k}),'ports')
-
-				idx=[];
-				for l=1:length(include_ports)
-					idx=[ idx find(birdstruct.(data_types{k}).ports==include_ports(l)) ];
-				end	
-
-				if isfield(birdstruct.(data_types{k}),'labels')
-					birdstruct.(data_types{k}).labels=birdstruct.(data_types{k}).labels(idx);
-				end
-
-				if isfield(birdstruct.(data_types{k}),'data')
-					birdstruct.(data_types{k}).data=birdstruct.(data_types{k}).data(:,idx);
-				end
-
-				birdstruct.(data_types{k}).ports=birdstruct.(data_types{k}).ports(idx);
-
-			end
-
-		end
 
 		if ~exist(foldername,'dir')
 			mkdir(foldername);
@@ -583,16 +535,9 @@ for i=1:length(proc_files)
 			if ~isempty(ext_pts) & ttl_skip
 
 				disp('Skipping song detection...');
-
-				try
-					movefile(proc_files{i},proc_dir);
-				catch
-					disp(['Could not move file ' proc_files{i}]);
-					fclose('all');
-					continue;
-				end
-
+				intan_frontend_finish(proc_files{i},proc_dir);
 				continue;
+			
 			end	
 
 		end
@@ -609,15 +554,9 @@ for i=1:length(proc_files)
 				bird_split{j},dirstructplayback,disp_band,colors,proc_files{i},proc_dir);
 
 			if ~isempty(ext_pts) & playback_skip
-				try
-					movefile(proc_files{i},proc_dir);
-				catch
-					disp(['Could not move file ' proc_files{i}]);
-					fclose('all');
-					continue;
-				end
-
+			
 				disp('Skipping song detection...');
+				intan_frontend_finish(proc_files{i},proc_dir);
 				continue;
 
 			end
@@ -668,13 +607,7 @@ for i=1:length(proc_files)
 	% if there is neither a mic nor a TTL signal, store everything?
 
 	clearvars datastruct dirstruct dirstructttl;
-
-	try
-		movefile(proc_files{i},proc_dir);
-	catch
-		disp(['Could not move file ' proc_files{i}]);
-		fclose('all');
-		continue;
-	end
+	
+	intan_frontend_finish(proc_files{i},proc_dir);
 
 end

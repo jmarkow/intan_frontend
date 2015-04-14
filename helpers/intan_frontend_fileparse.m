@@ -1,4 +1,4 @@
-function [PARSED PORTS DATENUM]=frontend_fileparse(FILENAME,DELIM,DATEFMT)
+function [PARSED DATENUM]=frontend_fileparse(FILENAME,DELIM,DATEFMT)
 %frontend_fileparse
 %
 %	frontend_fileparse(FILENAME,DELIM,FMT)
@@ -16,7 +16,6 @@ if nargin<2 | isempty(DELIM), DELIM='\_'; end
 if nargin<1 | isempty(FILENAME), error('Need filename to continue!'); end
 
 DATENUM=[];
-PORTS='';
 PARSED=[];
 
 port_labels='abcd';
@@ -24,16 +23,15 @@ port_labels='abcd';
 [path,filename,ext]=fileparts(FILENAME);
 filesplit=regexpi(filename,DELIM,'split');
 
-token.names={'mic','ttl','data_port','playback','data'};
-token.parse_strings={'mic','ttl','^port[a-z]\+','playback','data'};
+token.names={'audio','mic','ttl','data_port','playback','data'};
+token.parse_strings={'audio','mic','ttl','^port[a-z|A-Z]+','playback','data'};
 alias.name1={'mic'};
 alias.name2={'audio'};
 
 if length(filesplit)>2
 	for i=1:length(token.names)
-	
-		idx=find(~cellfun(@isempty,strfind(filesplit(3:end),...
-			token.parse_strings{i})));
+
+		idx=find(~cellfun(@isempty,regexpi(filesplit(3:end),token.parse_strings{i},'match')));
 
 		if ~isempty(idx)
 			fprintf(1,'Found %s token at position %i\n',token.names{i},idx+2);
@@ -84,6 +82,10 @@ for i=1:length(foundtokens)
 		suffix='';
 		counter=1;
 
+		% strip the foundtoken, parse the rest
+		
+		[~,startpoint,endpoint]=regexpi(string,foundtokens{i},'match');
+		string(startpoint:endpoint)=[];
 
 		while isfield(PARSED,foundtokens{i})
 			suffix=counter;
@@ -135,6 +137,18 @@ for i=1:length(foundtokens)
 				PARSED.(foundtokens{i}).channels(k)=channels(k);
 				fprintf(' %i',PARSED.(foundtokens{i}).channels(k));
 			end
+		end	
+	
+		[port,~,endpoint]=regexpi(string,'port','match');
+
+		if ~isempty(port) & length(string)>endpoint
+			tmp=lower(string(endpoint+1:end));
+			PARSED.(foundtokens{i}).ports=tmp(1);
+			fprintf('\n\tport %s\t',PARSED.(foundtokens{i}).ports);
+		end
+
+		if strcmp(foundtokens{i},'data_port')
+			continue;
 		end
 
 		if ~isempty(strfind(string,'ma'))|~isempty(strfind(string,'ep'))
@@ -149,39 +163,26 @@ for i=1:length(foundtokens)
 		end
 
 		PARSED.(foundtokens{i}).source=tmp_source;
-		fprintf('\n\tsource %s\t',PARSED.(foundtokens{i}).source);
+		fprintf('\n\tsource %s\t\n',PARSED.(foundtokens{i}).source);
 
-		[port,~,endpoint]=regexpi(string,'port','match');
-
-		if ~isempty(port) & length(string)>endpoint
-			tmp=lower(string(endpoint+1:end));
-			PARSED.(foundtokens{i}).ports=tmp(1);
-			fprintf('\n\tport %s\t',PARSED.(foundtokens{i}).ports);
-		end
-
-		fprintf('\n');
 	end
 
 end
 
+% legacy port mapping, if port is a separate field, this is an EPHYS port
 
 if isfield(PARSED,'data_port') & isfield(PARSED.data_port,'ports')
-
-	tmp=filesplit{PARSED.data_port.ports};
-	[port,startpoint,endpoint]=regexpi(tmp,'port','match');
-	tmp=lower(tmp(endpoint+1:end));
+	
+	tmp=PARSED.data_port.ports;
+	ports=[];
 
 	for i=1:length(port_labels)
 		if ~isempty(strfind(tmp,port_labels(i)))
-			PORTS=[ PORTS port_labels(i) ];
+			ports=[ ports port_labels(i) ];
 		end
 	end
-else
 
-	% if isempty assume all ports
-
-	PORTS=port_labels;
-
+	PARSED.ephys.ports=ports;
 end	
 
 

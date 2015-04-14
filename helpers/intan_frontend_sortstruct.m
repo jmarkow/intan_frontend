@@ -17,22 +17,22 @@ if any(tmp)
 	map_types{end+1}='data';
 end
 
-for k=1:length(map_types)
+for i=1:length(map_types)
 
-	curr_map=TOKENS.(map_types{k});
+	curr_map=TOKENS.(map_types{i});
 	src=curr_map.source;
 	check_fields=fieldnames(BIRDSTRUCT.(src));
 
-	for l=1:length(skip_fields)
-		check_fields(strcmp(lower(check_fields),skip_fields{l}))=[];
+	for j=1:length(skip_fields)
+		check_fields(strcmp(lower(check_fields),skip_fields{j}))=[];
 	end
 
 	to_del=1;
 
 	% special data type maps src to itself, only keeping user specified channels
 
-	if strcmp(map_types{k},'data')
-		map_types{k}=src;
+	if strcmp(map_types{i},'data')
+		map_types{i}=src;
 		to_del=0;
 	end
 
@@ -40,35 +40,41 @@ for k=1:length(map_types)
 
 	if isfield(BIRDSTRUCT,curr_map.source) 
 
-		BIRDSTRUCT.(map_types{k})=BIRDSTRUCT.(src);
+		BIRDSTRUCT.(map_types{i})=BIRDSTRUCT.(src);
 
-		idx=[];
-		for l=1:length(BIRDSTRUCT.(src).labels)
-			idx(l)=any(BIRDSTRUCT.(src).labels(l)==curr_map.channels);
+		% if there is a channel map use it, otherwise copy all channels
+
+		if isfield(curr_map,'channels')
+			idx=[];
+			for j=1:length(BIRDSTRUCT.(src).labels)
+				idx(j)=any(BIRDSTRUCT.(src).labels(j)==curr_map.channels);
+			end
+		else
+			idx=ones(size(BIRDSTRUCT.(src).labels);
 		end
 
-		% if we have a port argument, use it
+		% if we have a port argument, use it as well
 
 		if isfield(curr_map,'ports') & isfield(BIRDSTRUCT.(src),'ports')
 			idx2=[];
-			for l=1:length(BIRDSTRUCT.(src).ports)
-				idx2(l)=any(BIRDSTRUCT.(src).ports(l)==curr_map.ports);
+			for j=1:length(BIRDSTRUCT.(src).ports)
+				idx2(j)=any(BIRDSTRUCT.(src).ports(j)==curr_map.ports);
 			end
 			idx=(idx&idx2);
 		end
 
 		idx=find(idx);
 
-		for l=1:length(check_fields)
-			if isfield(BIRDSTRUCT.(src),check_fields{l})
-				ndim=ndims(BIRDSTRUCT.(src).(check_fields{l}));
+		for j=1:length(check_fields)
+			if isfield(BIRDSTRUCT.(src),check_fields{j})
+				ndim=ndims(BIRDSTRUCT.(src).(check_fields{j}));
 				if ndim==2
-					BIRDSTRUCT.(map_types{k}).(check_fields{l})=BIRDSTRUCT.(src).(check_fields{l})(:,idx);
+					BIRDSTRUCT.(map_types{i}).(check_fields{j})=BIRDSTRUCT.(src).(check_fields{j})(:,idx);
 					if to_del
-						BIRDSTRUCT.(src).(check_fields{l})(:,idx)=[];
+						BIRDSTRUCT.(src).(check_fields{j})(:,idx)=[];
 					end
 				elseif ndim==1
-					BIRDSTRUCT.(map_types{k}).(check_fields{l})=BIRDSTRUCT.(src).(check_fields{l});
+					BIRDSTRUCT.(map_types{i}).(check_fields{j})=BIRDSTRUCT.(src).(check_fields{j});
 				end
 			end
 		end
