@@ -34,12 +34,22 @@ if ~isempty(sleep_listing)
     datetoken=length(tokens)-1:length(tokens);
     last_datenum=datenum([tokens{datetoken}],'yymmddHHMMSS');
 	disp(['Last extraction:  ' datestr(last_datenum)]);
-	time_elapsed=etime(datevec(DATA.file_datenum),datevec(last_datenum))
+	time_elapsed=etime(datevec(DATA.file_datenum),datevec(last_datenum));
 else
 	time_elapsed=(SLEEP_FILEINTERVAL*60)+1;
 end
 
-data_types={'ephys','ttl','digout','digin','adc','aux','playback'};
+data_types={'ephys','ttl','digout','digin','adc','aux','playback','audio'};
+found_types=fieldnames(DATA);
+
+to_del=[];
+for i=1:length(data_types)
+	if ~any(strcmp(found_types,data_types{i}))
+		to_del=[to_del i];
+	end
+end
+
+data_types(to_del)=[];
 
 savefun=@(filename,datastruct) save(filename,'-struct','datastruct','-v7.3');
 
@@ -70,10 +80,6 @@ if time_elapsed>=SLEEP_FILEINTERVAL*60
 			DATA.(data_types{j}).t=DATA.(data_types{j}).t(1:stopsample);
 		end
 	end
-
-	DATA.audio=rmfield(DATA.audio,'norm_data');
-
-	DATA.audio.data=DATA.audio.data(1:stopsample);
 
 	savefun(fullfile(sleep_dir,['sleepdata1_' FILENAME '.mat']),DATA);
 
