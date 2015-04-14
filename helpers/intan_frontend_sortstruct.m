@@ -50,7 +50,7 @@ for i=1:length(map_types)
 				idx(j)=any(BIRDSTRUCT.(src).labels(j)==curr_map.channels);
 			end
 		else
-			idx=ones(size(BIRDSTRUCT.(src).labels);
+			idx=ones(size(BIRDSTRUCT.(src).labels));
 		end
 
 		% if we have a port argument, use it as well

@@ -240,15 +240,9 @@ end
 
 
 if ~isempty(parse_options)
-
 	if parse_options(1)~=delimiter
 		parse_options=[delimiter parse_options ];
 	end
-
-	%if parse_options(end)~=delimiter
-	%	parse_options=[parse_options delimiter];
-    	%end
-
 end
 
 if exist('gmail_send')~=2
@@ -272,7 +266,7 @@ filelisting=dir(fullfile(DIR));
 isdir=cat(1,filelisting(:).isdir);
 filelisting(isdir)=[];
 
-% read in appropriate suffixes 
+% read in appropriate extensions 
 
 filenames={filelisting(:).name};
 hits=regexp(filenames,'\.(rhd|int|mat)','match');
