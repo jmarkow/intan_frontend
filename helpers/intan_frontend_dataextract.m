@@ -153,7 +153,7 @@ for i=1:size(EXT_PTS,1)
 		EXTDATA.(SOURCE).norm_data=EXTDATA.(SOURCE).norm_data./(max_audio*(1+1e-3));
 	end
 
-	audiowrite(fullfile(DIRS.wav,[ save_name '.wav' ]),EXTDATA.(SOURCE).norm_data,fs);
+	audiowrite(fullfile(DIRS.wav,[ save_name '.wav' ]),EXTDATA.(SOURCE).norm_data,round(fs));
 
 	%wavwrite(EXTDATA.(SOURCE).norm_data,fs,fullfile(DIRS.wav,[ save_name '.wav']));
 
