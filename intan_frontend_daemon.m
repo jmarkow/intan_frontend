@@ -34,7 +34,7 @@ end
 
 email_flag=0; % did we send an e-mail? initialize as 0
 last_file=clock; % when was the last file processed?
-interval=120;
+interval=30;
 
 while 1==1
 
