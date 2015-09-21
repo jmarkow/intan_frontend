@@ -559,7 +559,7 @@ for i=1:length(proc_files)
 
 		% did we detect song?
 
-		if isaudio
+		if isaudio & ~isempty(birdstruct.audio.data)
 
 			disp('Entering song detection...');
 
@@ -571,7 +571,7 @@ for i=1:length(proc_files)
 			end
 
 			birdstruct.audio.norm_data=birdstruct.audio.norm_data./max(abs(birdstruct.audio.norm_data));
-			
+		
 			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
 				'len',song_len,'overlap',song_overlap,'song_duration',song_duration,...
 				'ratio_thresh',song_ratio,'song_thresh',song_thresh,'pow_thresh',song_pow);

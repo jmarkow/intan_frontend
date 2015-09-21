@@ -132,7 +132,7 @@ for i=1:size(EXT_PTS,1)
 	[f,t]=size(chunk_sonogram_im);
 	chunk_im_son_to_vec=(length(EXTDATA.(SOURCE).data)-(10/1e3)*fs)/t;
 
-	if ~isempty(EXTDATA.ttl.data)
+	if isfield(EXTDATA,'ttl') & ~isempty(EXTDATA.ttl.data)
 		ttl_points=find(EXTDATA.ttl.data>.5);
 		ttl_son=round(ttl_points/chunk_im_son_to_vec);
 		ttl_son(ttl_son<1|ttl_son>size(chunk_sonogram_im,2))=[];
