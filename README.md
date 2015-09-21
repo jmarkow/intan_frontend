@@ -117,7 +117,7 @@ These options can be broken down into specifying the data *type*, *source* (RHD 
 | ttl | TTL source |
 | playback | playback source |
 
-This is followed by the *channel* then the *source*.  The data source can be (relevant only for RHD system):
+This is followed by the *channel* then the *source*.  Note that the *channel* can contain ranges indicated using a hyphen (e.g. 4-8 expands to 4,5,6,7,8) and multiple channels can be specified using any symbol other than the `field_delimiter` or `bird_delimiter` (e.g. 4-8+10 expands to 4,5,6,7,8,10 and 4-8+12-15+17 to 4,5,6,7,8,12,13,14,15,17).  The data source can be (relevant only for RHD system):
 
 | Source | Text | Notes |
 |--------|------|-------|
