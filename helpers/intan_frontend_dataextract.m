@@ -133,7 +133,8 @@ for i=1:size(EXT_PTS,1)
 	chunk_im_son_to_vec=(length(EXTDATA.(SOURCE).data)-(10/1e3)*fs)/t;
 
 	if isfield(EXTDATA,'ttl') & ~isempty(EXTDATA.ttl.data)
-		ttl_points=find(EXTDATA.ttl.data>.5);
+		ttl_points=find(EXTDATA.ttl.data(:,1)>.5); % slave plotting to first TTL channel for simplicity, rather than 
+												   % multi-color (to add later perhaps)
 		ttl_son=round(ttl_points/chunk_im_son_to_vec);
 		ttl_son(ttl_son<1|ttl_son>size(chunk_sonogram_im,2))=[];
 		chunk_sonogram_im(1:10,round(ttl_son))=62;
