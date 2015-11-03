@@ -7,6 +7,11 @@ function frontend_extract_data(FILENAME,DATA,DIRS,EXT_PTS,DISP_MINFS,DISP_MAXFS,
 %
 %
 
+row_size=10;
+ttl_colors=[ 1 1 1;...
+	1 0 1;...
+	0 1 1;...
+	0 0 1];
 
 fs=DATA.(SOURCE).fs;
 
@@ -127,21 +132,45 @@ for i=1:size(EXT_PTS,1)
 	startidx=max([find(chunk_sonogram_f<=DISP_MINFS)]);
 	stopidx=min([find(chunk_sonogram_f>=DISP_MAXFS)]);
 
-	chunk_sonogram_im=chunk_sonogram_im(startidx:stopidx,:)*62;
+	chunk_sonogram_im=uint8(chunk_sonogram_im(startidx:stopidx,:)*62);
 	chunk_sonogram_im=flipdim(chunk_sonogram_im,1);
 	[f,t]=size(chunk_sonogram_im);
 	chunk_im_son_to_vec=(length(EXTDATA.(SOURCE).data)-(10/1e3)*fs)/t;
 
+	% convert sonogram to an rgb image, label TTL pulses using RGB stripes
+
+	chunk_sonogram_im=ind2rgb(chunk_sonogram_im,colormap([ COLORS '(63)' ]));
+
 	if isfield(EXTDATA,'ttl') & ~isempty(EXTDATA.ttl.data)
-		ttl_points=find(EXTDATA.ttl.data(:,1)>.5); % slave plotting to first TTL channel for simplicity, rather than 
-												   % multi-color (to add later perhaps)
-		ttl_son=round(ttl_points/chunk_im_son_to_vec);
-		ttl_son(ttl_son<1|ttl_son>size(chunk_sonogram_im,2))=[];
-		chunk_sonogram_im(1:10,round(ttl_son))=62;
+
+		[nsamples_ttl,nchannels_ttl]=size(EXTDATA.ttl.data);
+
+		cur_top=1;
+
+		nttl_colors=size(ttl_colors,1);
+
+		for j=1:nchannels_ttl
+
+			cur_row=cur_top:cur_top+(row_size-1);
+			ttl_points=find(EXTDATA.ttl.data(:,j)>.5);
+
+			ttl_son=round(ttl_points/chunk_im_son_to_vec);
+			ttl_son(ttl_son<1|ttl_son>size(chunk_sonogram_im,2))=[];
+			ttl_son=round(ttl_son);
+
+			ttl_map=zeros(row_size,length(ttl_son),3);
+
+			cur_color=reshape(ttl_colors(mod((j-1),nttl_colors)+1,:),[1 1 3]);
+			chunk_sonogram_im(cur_row,ttl_son,:)=repmat(cur_color,[row_size length(ttl_son) 1]);
+		
+			cur_top=cur_top+row_size;
+
+		end
+
 	end
 
-	imwrite(uint8(chunk_sonogram_im),colormap([ COLORS '(63)']),fullfile(DIRS.image,[ save_name '.gif']),'gif');
-
+	[chunk_sonogram_im,new_map]=rgb2ind(chunk_sonogram_im,63);
+	imwrite(chunk_sonogram_im,new_map,fullfile(DIRS.image,[ save_name '.gif']),'gif');
 
 	% normalize audio to write out to wav file
 
