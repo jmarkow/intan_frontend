@@ -7,11 +7,14 @@ function frontend_extract_data(FILENAME,DATA,DIRS,EXT_PTS,DISP_MINFS,DISP_MAXFS,
 %
 %
 
+% hard-coded parameters for visualization
+
 row_size=10;
 ttl_colors=[ 1 1 1;...
 	1 0 1;...
 	0 1 1;...
 	0 0 1];
+nttl_colors=size(ttl_colors,1);
 
 fs=DATA.(SOURCE).fs;
 
@@ -19,7 +22,7 @@ if nargin<12
 	SKIP=0;
 end
 
-if nargin<11 
+if nargin<11
 	SUFFIX='';
 end
 
@@ -35,7 +38,7 @@ if nargin<8 | isempty(SOURCE)
 	SOURCE='audio';
 end
 
-[b,a]=ellip(5,.2,40,[300/(fs/2)],'high'); 
+[b,a]=ellip(5,.2,40,[300/(fs/2)],'high');
 if ~isfield(DATA.(SOURCE),'norm_data')
 	DATA.(SOURCE).norm_data=filtfilt(b,a,DATA.(SOURCE).data);
 end
@@ -71,6 +74,13 @@ end
 
 data_types(to_del)=[];
 
+dir_types=fieldnames(DIRS);
+for i=1:length(dir_types)
+	if ~exist(DIRS.(dir_types{i}),'dir')
+		mkdir(DIRS.(dir_types{i}));
+	end
+end
+
 savefun=@(filename,datastruct) save(filename,'-struct','datastruct','-v7.3');
 sonogram_filename=fullfile(DIRS.image,[ PREFIX FILENAME SUFFIX '.gif' ]);
 
@@ -98,7 +108,7 @@ for i=1:size(EXT_PTS,1)
 			if startpoint<1 & SKIP
 				continue;
 			elseif startpoint<1 & ~SKIP
-				startpoint=1; 
+				startpoint=1;
 			end
 
 			if endpoint>length(EXTDATA.(data_types{j}).data) & SKIP
@@ -144,10 +154,7 @@ for i=1:size(EXT_PTS,1)
 	if isfield(EXTDATA,'ttl') & ~isempty(EXTDATA.ttl.data)
 
 		[nsamples_ttl,nchannels_ttl]=size(EXTDATA.ttl.data);
-
 		cur_top=1;
-
-		nttl_colors=size(ttl_colors,1);
 
 		for j=1:nchannels_ttl
 
@@ -162,11 +169,10 @@ for i=1:size(EXT_PTS,1)
 
 			cur_color=reshape(ttl_colors(mod((j-1),nttl_colors)+1,:),[1 1 3]);
 			chunk_sonogram_im(cur_row,ttl_son,:)=repmat(cur_color,[row_size length(ttl_son) 1]);
-		
+
 			cur_top=cur_top+row_size;
 
 		end
-
 	end
 
 	[chunk_sonogram_im,new_map]=rgb2ind(chunk_sonogram_im,63);
@@ -206,4 +212,3 @@ end
 
 reformatted_im=markolab_im_reformat(sonogram_im,(ceil((length(DATA.(SOURCE).data)/fs)/10)));
 imwrite(uint8(reformatted_im),colormap([ COLORS '(63)']),sonogram_filename,'gif');
-
