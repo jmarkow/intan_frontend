@@ -3,12 +3,12 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %on the fly.  Its primary task is to determine which bits of data
 %to keep and which to throw-away.  This has been designed from the ground
 %up to work with RHA/RHD-series Intan recordings aligned to vocalizations,
-%but can easily be configured to work with other types of trial data.  
+%but can easily be configured to work with other types of trial data.
 %
 %	intan_frontend_main(DIR,varargin)
 %
 %	DIR
-%	directory to process 
+%	directory to process
 %
 %	the following may be specified as parameter/value pairs
 %
@@ -18,24 +18,24 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %
 %		window
 %		spectrogram window for song detection (default: 250 samples)
-%		
+%
 %		noverlap
 %		window overlap for song detection (default: 0)
 %
 %		song_thresh
 %		song threshold (default: .2)
-%	
+%
 %		songduration
 %		song duration for song detection in secs (default: .8 seconds)
 %
 %		low
-%		parameter for spectrogram display (default: 5), lower if spectrogram are dim		
+%		parameter for spectrogram display (default: 5), lower if spectrogram are dim
 %
 %		high
 %		parameter for spectrogram display (default: 10)
 %
 %		colors
-%		spectrogram colormap (default: hot)		
+%		spectrogram colormap (default: hot)
 %
 %		filtering
 %		high pass corner for mic trace (default: 300 Hz)
@@ -48,13 +48,13 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 %
 %		image_pre
 %		image sub directory (default: 'gif')
-%	
+%
 %		wav_pre
 %		wav sub directory (default: 'wav')
 %
 %		data_pre
 %		data sub directory (default: 'mat')
-%	
+%
 %		delimiter
 %		delimiter for filename parsing (default: '\_', or underscore)
 %
@@ -66,7 +66,7 @@ function [EMAIL_FLAG,LAST_FILE]=intan_frontend_main(DIR,varargin)
 % To run this in daemon mode, intan_frontend_daemon.m in the directory with unprocessed Intan
 % files.  Be sure to create the appropriate directory structure using epys_pipeline_mkdirs.m first.
 
-% while running the daemon this can be changed 
+% while running the daemon this can be changed
 
 song_ratio=2; % power ratio between song and non-song band
 song_len=.005; % window to calculate ratio in (ms)
@@ -103,7 +103,7 @@ bird_delimiter='\&'; % delimiter for splitting multiple birds
 % sleep parameters
 
 sleep_window=[ 22 7 ]; % times for keeping track of sleep data (24 hr time, start and stop)
-sleep_fileinterval=10; % specify file interval (in minutes) 
+sleep_fileinterval=10; % specify file interval (in minutes)
 sleep_segment=5; % how much data to keep (in seconds)
 
 % email_parameters
@@ -266,7 +266,7 @@ filelisting=dir(fullfile(DIR));
 isdir=cat(1,filelisting(:).isdir);
 filelisting(isdir)=[];
 
-% read in appropriate extensions 
+% read in appropriate extensions
 
 filenames={filelisting(:).name};
 hits=regexp(filenames,'\.(rhd|int|mat)','match');
@@ -281,14 +281,10 @@ end
 
 clear filenames;
 
-% check all files in proc directory and delete anything older than 
+% check all files in proc directory and delete anything older than
 % auto-delete days
 
-if ~isempty(auto_delete_int)
-	intan_frontend_auto_delete(proc_dir,auto_delete_int,'rhd');
-	intan_frontend_auto_delete(proc_dir,auto_delete_int,'int'); 
-	intan_frontend_auto_delete(proc_dir,auto_delete_int,'mat'); 
-end
+
 
 tmp_filelisting=dir(fullfile(DIR));
 tmp_filenames={tmp_filelisting(:).name};
@@ -320,12 +316,18 @@ user_recid=recid;
 
 for i=1:length(proc_files)
 
+	if ~isempty(auto_delete_int)
+		intan_frontend_auto_delete(proc_dir,auto_delete_int,'rhd');
+		intan_frontend_auto_delete(proc_dir,auto_delete_int,'int');
+		intan_frontend_auto_delete(proc_dir,auto_delete_int,'mat');
+	end
+
 	fclose('all'); % seems to be necessary
 
 	% read in the data
 
 	% parse for the bird name,zone and date
-	% new folder format, yyyy-mm-dd for easy sorting (on Unix systems at least)	
+	% new folder format, yyyy-mm-dd for easy sorting (on Unix systems at least)
 
 	disp([repmat(hline,[2 1])]);
 	disp(['Processing: ' proc_files{i}]);
@@ -356,7 +358,7 @@ for i=1:length(proc_files)
 		continue;
 	end
 
-	if datastruct.filestatus>0 
+	if datastruct.filestatus>0
 		disp('Could not read file, skipping...');
 		intan_frontend_finish(proc_files{i},proc_dir);
 		continue;
@@ -429,7 +431,7 @@ for i=1:length(proc_files)
 
 		% now create the folder it doesn't exist already
 
-		foldername=fullfile(root_dir,tokens.birdid,tokens.recid,datestr(file_datenum,folder_format));	
+		foldername=fullfile(root_dir,tokens.birdid,tokens.recid,datestr(file_datenum,folder_format));
 
 		% create the bird directory
 
@@ -444,7 +446,7 @@ for i=1:length(proc_files)
 			copyfile(fullfile(script_path,'template_readme.txt'),...
 				fullfile(root_dir,tokens.birdid,'templates','README.txt'));
 		end
-	
+
 		% loop through variables, anything with a port only take the include port
 
 		datastruct.file_datenum=file_datenum;
@@ -478,7 +480,7 @@ for i=1:length(proc_files)
 				disp(['Processing sleep data for file ' proc_files{i}]);
 
 				intan_frontend_sleepdata(birdstruct,bird_split{j},sleep_window,sleep_segment,sleep_fileinterval,sleep_pre,...
-					fullfile(root_dir,tokens.birdid,tokens.recid),folder_format,delimiter);	
+					fullfile(root_dir,tokens.birdid,tokens.recid),folder_format,delimiter);
 
 				sleep_flag=1;
 
@@ -531,8 +533,8 @@ for i=1:length(proc_files)
 				disp('Skipping song detection...');
 				intan_frontend_finish(proc_files{i},proc_dir);
 				continue;
-			
-			end	
+
+			end
 
 		end
 
@@ -540,7 +542,7 @@ for i=1:length(proc_files)
 
 		if isplayback & playback_extract
 
-			% insert song detection code, change audio to playback?, or pass flag for show 
+			% insert song detection code, change audio to playback?, or pass flag for show
 			% playback data
 
 			disp('Entering playback detection...');
@@ -548,7 +550,7 @@ for i=1:length(proc_files)
 				bird_split{j},dirstructplayback,disp_band,colors,proc_files{i},proc_dir);
 
 			if ~isempty(ext_pts) & playback_skip
-			
+
 				disp('Skipping song detection...');
 				intan_frontend_finish(proc_files{i},proc_dir);
 				continue;
@@ -564,14 +566,14 @@ for i=1:length(proc_files)
 			disp('Entering song detection...');
 
 			if ~isempty(filtering)
-				[b,a]=butter(5,[filtering/(birdstruct.audio.fs/2)],'high'); 
+				[b,a]=butter(5,[filtering/(birdstruct.audio.fs/2)],'high');
 				birdstruct.audio.norm_data=filtfilt(b,a,birdstruct.audio.data);
 			else
 				birdstruct.audio.norm_data=detrend(birdstruct.audio.data);
 			end
 
 			birdstruct.audio.norm_data=birdstruct.audio.norm_data./max(abs(birdstruct.audio.norm_data));
-		
+
 			[song_bin,song_t]=zftftb_song_det(birdstruct.audio.norm_data,birdstruct.audio.fs,'song_band',song_band,...
 				'len',song_len,'overlap',song_overlap,'song_duration',song_duration,...
 				'ratio_thresh',song_ratio,'song_thresh',song_thresh,'pow_thresh',song_pow);
@@ -580,13 +582,13 @@ for i=1:length(proc_files)
 
 			% interpolate song detection to original space, collate idxs
 
-			detection=interp1(song_t,double(song_bin),raw_t,'nearest'); 
+			detection=interp1(song_t,double(song_bin),raw_t,'nearest');
 			ext_pts=markolab_collate_idxs(detection,round(audio_pad*birdstruct.audio.fs))/birdstruct.audio.fs;
 
 			if ~isempty(ext_pts)
 				disp(['Song detected in file:  ' proc_files{i}]);
 				intan_frontend_dataextract(bird_split{j},birdstruct,dirstruct,...
-					ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','');	
+					ext_pts,disp_band(1),disp_band(2),colors,'audio',1,'songdet1_','');
 			end
 
 		end
@@ -601,7 +603,7 @@ for i=1:length(proc_files)
 	% if there is neither a mic nor a TTL signal, store everything?
 
 	clearvars datastruct dirstruct dirstructttl;
-	
+
 	intan_frontend_finish(proc_files{i},proc_dir);
 
 end
