@@ -61,11 +61,12 @@ switch lower(ext)
 
 		DATASTRUCT.ephys.t=t;
 		DATASTRUCT.ephys.labels=amps;
+        DATASTRUCT.ephys.ports=repmat('A',[1 length(amps)]);
 		DATASTRUCT.ephys.data=data;
 		DATASTRUCT.ephys.fs=round(1./(t(2)-t(1)));
 
 		DATASTRUCT.aux.t=DATASTRUCT.ephys.t;
-		DATASTRUCT.aux.labels=1:size(AUX,2);
+		DATASTRUCT.aux.labels=1:size(aux,2);
 		DATASTRUCT.aux.data=aux;
 		DATASTRUCT.aux.fs=DATASTRUCT.ephys.fs;
 

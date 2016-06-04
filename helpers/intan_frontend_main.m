@@ -269,7 +269,7 @@ filelisting(isdir)=[];
 % read in appropriate extensions 
 
 filenames={filelisting(:).name};
-hits=regexp(filenames,'\.(rhd|int|mat)','match');
+hits=regexp(filenames,'\.(rhd|int|mat)$','match');
 hits=cellfun(@length,hits)>0;
 
 filenames(~hits)=[];
@@ -343,6 +343,8 @@ for i=1:length(proc_files)
 		bytedif=dir1.bytes-dir2.bytes;
 	catch
 		pause(10);
+        dir1
+        dir2
 		bytedif=dir1.bytes-dir2.bytes;
 	end
 

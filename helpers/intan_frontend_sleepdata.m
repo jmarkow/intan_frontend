@@ -25,7 +25,7 @@ end
 sleep_foldername=fullfile(BASE_DIR,datestr(new_datenum,FOLDER_FORMAT));
 sleep_dir=fullfile(sleep_foldername,SLEEP_FOLDER);
 sleep_listing=dir(fullfile(sleep_dir,'*.mat'));
-parameters=DATA.parameters;
+%parameters=DATA.parameters;
 
 % get the date number of the last saved file
 
@@ -69,8 +69,9 @@ if time_elapsed>=SLEEP_FILEINTERVAL*60
 
 
 	for j=1:length(data_types)
-		if ~isempty(DATA.(data_types{j}).data)
-			stopsample=round(SLEEP_SEGMENT*DATA.(data_types{j}).fs);
+		if ~isempty(DATA.(data_types{j}).data) & SLEEP_SEGMENT~=inf
+			
+            stopsample=round(SLEEP_SEGMENT*DATA.(data_types{j}).fs);
 			
 			if stopsample>length(DATA.(data_types{j}).data)
 				stopsample=length(DATA.(data_types{j}).data);

@@ -92,7 +92,8 @@ end
 fprintf(1, '\n\n');
 
 % Pre-allocate large data matrices.
-aux = zeros(t_count,6,'uint8');
+
+aux = zeros(round(t_count),6,'uint8');
 t = (0:1:(t_count-1))/25000;
 t = t';
 
